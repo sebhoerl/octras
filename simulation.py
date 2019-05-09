@@ -62,7 +62,7 @@ class Simulator:
             parameters["java_path"], "-Xmx%s" % parameters["java_memory"],
             "-cp", parameters["class_path"],
             "ch.ethz.matsim.projects.astra_2018_002.RunASTRA2018002",
-            "--config-path", parameters["config_path"],
+            "--config-path", parameters["config_path"].replace("{sample_size}", parameters["sample_size"]),
             "--config:controler.outputDirectory", "%s/output" % simulation["path"],
             "--config:controler.lastIteration", str(parameters["iterations"]),
             "--config:global.numberOfThreads", str(parameters["number_of_threads"]),

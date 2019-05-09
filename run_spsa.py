@@ -9,7 +9,8 @@ simulator = Simulator({
     "java_path": "/usr/java/jdk1.8.0_144/bin/java",
     "working_directory": "temp",
     "class_path": "simulation/astra_2018_002-1.0.0.jar",
-    "config_path": "simulation/sa/sa_config.xml"
+    "config_path": "simulation/zurich_{sample_size}/zurich_config.xml",
+    "sample_size": "1pm"
 })
 
 number_of_iterations = 20
