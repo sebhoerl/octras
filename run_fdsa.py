@@ -1,22 +1,28 @@
 from simulation import Simulator
 from calibration import CalibrationProblem, Calibrator
 from problems import ModeShareProblem
+import reference
 
 import time
 import numpy as np
+
+number_of_iterations = 20
 
 simulator = Simulator({
     "java_path": "/usr/java/jdk1.8.0_144/bin/java",
     "working_directory": "temp",
     "class_path": "simulation/astra_2018_002-1.0.0.jar",
     "config_path": "simulation/zurich_{sample_size}/zurich_config.xml",
+    "number_of_threads": 4,
+    "number_of_parallel_runs": 1
+})
+
+mode_share_reference = reference.get_mode_share_reference("simulation/reference.csv")
+problem = ModeShareProblem(mode_share_reference, default_parameters = {
+    "iterations": number_of_iterations,
     "sample_size": "1pm"
 })
 
-number_of_iterations = 20
-number_of_iterations = 2
-
-problem = ModeShareProblem(number_of_iterations)
 calibrator = Calibrator(problem)
 
 perturbation_factor = 1.0

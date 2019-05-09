@@ -1,6 +1,6 @@
 from simulation import Simulator
 from calibration import CalibrationProblem, Calibrator
-from problems import ModeShareProblem
+from problems import TravelTimeProblem
 import reference
 
 import time
@@ -17,8 +17,8 @@ simulator = Simulator({
     "number_of_parallel_runs": 1
 })
 
-mode_share_reference = reference.get_mode_share_reference("simulation/reference.csv")
-problem = ModeShareProblem(mode_share_reference, default_parameters = {
+travel_time_reference, travel_time_bounds = reference.get_travel_time_reference("simulation/reference.csv", 5)
+problem = TravelTimeProblem(travel_time_reference, travel_time_bounds, default_parameters = {
     "iterations": number_of_iterations,
     "sample_size": "1pm"
 })
