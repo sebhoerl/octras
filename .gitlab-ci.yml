@@ -1,0 +1,3 @@
+test:
+   script:
+       - PYTHONPATH=${CI_PROJECT_DIR} pytest
