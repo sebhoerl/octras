@@ -1,6 +1,6 @@
 import numpy as np
 
-from octras.tests.utils import ExponentialSimulator, ExponentialProblem
+from octras.tests.utils import RoadRailSimulator, RoadRailProblem
 from octras.simulation import Scheduler
 from octras.optimization import Optimizer
 
@@ -11,11 +11,11 @@ from octras.algorithms.scipy import scipy_algorithm
 def test_opdyts():
     np.random.seed(0)
 
-    simulator = ExponentialSimulator([1.0, 2.0, 1.0], [-0.1, -0.05, -0.2], int(1e6))
-    problem = ExponentialProblem(3)
+    simulator = RoadRailSimulator()
+    problem = RoadRailProblem()
 
     scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem)
+    optimizer = Optimizer(scheduler, problem, maximum_cost = 200 * 20)
 
-    parameters, objective = opdyts_algorithm(optimizer, perturbation_factor = 0.05, transition_iterations = 50, number_of_transitions = 100, maximum_transitions = int(1e3))
-    assert objective < 0.02
+    opdyts_algorithm(optimizer, perturbation_factor = 2.0, transition_iterations = 10, number_of_transitions = 20)
+    assert optimizer.best_objective < 0.01

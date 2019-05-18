@@ -43,34 +43,48 @@ class RosenbrockSimulator(octras.simulation.Simulator):
     def get_result(self, identifier):
         return self.results[identifier]
 
-class ExponentialSimulator(octras.simulation.Simulator):
-    def __init__(self, C, l, step_size = 1e-3, default_iterations = 100):
+class RoadRailSimulator(octras.simulation.Simulator):
+    def __init__(self):
+        self.number_of_travellers = 1000
+
+        self.alpha_road = 0.5 * np.random.normal(size = (self.number_of_travellers,))
+        self.alpha_rail = 0.5 * 2.0 * (np.zeros(shape = (self.number_of_travellers,)) - 0.5)
+
+        self.beta_road = -np.random.random(size = (self.number_of_travellers,)) * 0.1
+        self.beta_rail = -np.random.random(size = (self.number_of_travellers,)) * 0.1
+        self.beta_money = -np.random.random(size = (self.number_of_travellers,)) * 0.1
+
         self.results = {}
+        self.states = {}
         self.iterations = {}
 
-        self.l = l
-        self.C = C
-        self.step_size = step_size
-        self.default_iterations = default_iterations
-
     def run(self, identifier, parameters):
-        if "iterations" in parameters:
-            iterations = parameters["iterations"]
-        else:
-            iterations = self.default_iterations
+        iterations = parameters["iterations"]
+        self.iterations[identifier] = iterations
+
+        toll = parameters["toll"]
+        road_count = None
+
+        travel_time_road = 60.0
+        travel_time_rail = 30.0
+
+        road_selector = np.random.random(size = (self.number_of_travellers,)) > 0.5
 
         if "initial_identifier" in parameters:
-            print("initial %d -> %d" % (iterations, iterations + self.iterations[parameters["initial_identifier"]]))
-            iterations += self.iterations[parameters["initial_identifier"]]
+            road_selector = self.states[parameters["initial_identifier"]]
 
-        x = parameters["x"]
+        for k in range(iterations):
+            road_count = np.sum(road_selector)
+            travel_time_road = 30.0 * (1.0 - road_count / self.number_of_travellers)
 
-        self.results[identifier] = [
-            Ci * np.exp(li * iterations * self.step_size) + xi
-            for Ci, li, xi in zip(self.C, self.l, x)
-        ]
+            utilities_road = self.alpha_road + self.beta_road * travel_time_road + self.beta_money * toll + 0.01 * np.random.normal(size = (self.number_of_travellers,))
+            utilities_rail = self.alpha_rail + self.beta_rail * travel_time_rail + 0.01 * np.random.normal(size = (self.number_of_travellers,))
 
-        self.iterations[identifier] = iterations
+            replanning_selector = np.random.random(size = (self.number_of_travellers,)) < 0.07
+            road_selector[replanning_selector] = (utilities_road > utilities_rail)[replanning_selector]
+
+        self.results[identifier] = road_count / self.number_of_travellers
+        self.states[identifier] = road_selector
 
     def is_running(self, identifier):
         return False
@@ -78,29 +92,26 @@ class ExponentialSimulator(octras.simulation.Simulator):
     def get_result(self, identifier):
         return self.results[identifier]
 
-class ExponentialProblem(octras.optimization.OptimizationProblem):
-    def __init__(self, dimensions):
-        octras.optimization.OptimizationProblem.__init__(self, dimensions, dimensions, np.zeros((dimensions,)))
-        self.dimensions = dimensions
+    def get_cost(self, identifier):
+        return self.iterations[identifier]
+
+class RoadRailProblem(octras.optimization.OptimizationProblem):
+    def __init__(self):
+        octras.optimization.OptimizationProblem.__init__(self, 1, 1, np.zeros((1,)))
 
     def get_simulator_parameters(self, parameters):
-        return { "x": parameters }
+        return { "toll": parameters[0] }
 
-    def compute_state(self, parameters, simulator_result):
-        return simulator_result
-
-    def compute_objective(self, parameters, state):
-        return np.sum(np.abs(state))
+    def evaluate(self, parameters, simulator_result):
+        return np.sum(np.abs(simulator_result - 0.75)**2), simulator_result
 
 class RealDimensionalProblem(octras.optimization.OptimizationProblem):
-    def __init__(self, dimensions, variable_name = "x", dimensions_name = "dimensions"):
+    def __init__(self, dimensions):
         octras.optimization.OptimizationProblem.__init__(self, dimensions, 1, np.zeros((dimensions,)))
         self.dimensions = dimensions
-        self.variable_name = variable_name
-        self.dimensions_name = dimensions_name
 
     def get_simulator_parameters(self, parameters):
-        return { self.variable_name: parameters, self.dimensions_name: self.dimensions }
+        return { "x": parameters, "dimensions": self.dimensions }
 
-    def compute_state(self, parameters, simulator_result):
-        return simulator_result
+    def evaluate(self, parameters, simulator_result):
+        return simulator_result, simulator_result

@@ -1,11 +1,15 @@
 import numpy as np
 
-def random_walk_algorithm(calibrator, ranges, maximum_iterations = 1000):
-    best_objective = np.inf
-    best_parameters = None
+import logging
+logger = logging.getLogger(__name__)
+
+def random_walk_algorithm(calibrator, ranges):
     iteration = 0
 
-    while iteration < maximum_iterations:
+    while not calibrator.finished:
+        iteration += 1
+        logger.info("Starting Random Walk iteration %d." % iteration)
+
         parameters = np.array([
             ranges[i][0] + np.random.random() * (ranges[i][1] - ranges[i][0])
             for i in range(calibrator.problem.number_of_parameters)
@@ -14,12 +18,3 @@ def random_walk_algorithm(calibrator, ranges, maximum_iterations = 1000):
         identifier = calibrator.schedule(parameters)
         objective, state = calibrator.get(identifier)
         calibrator.cleanup(identifier)
-
-        if objective < best_objective:
-            print("Iteration %d, Objective %f" % (iteration, objective))
-            best_objective = objective
-            best_parameters = parameters
-
-        iteration += 1
-
-    return best_parameters, best_objective

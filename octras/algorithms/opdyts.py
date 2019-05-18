@@ -1,6 +1,9 @@
 import numpy as np
 import scipy.optimize as opt
 
+import logging
+logger = logging.getLogger(__name__)
+
 class ApproximateSelectionProblem:
     def __init__(self, v, w, deltas, objectives):
         self.deltas = deltas
@@ -71,12 +74,9 @@ class AdaptationProblem:
 
         return result.x
 
-def opdyts_algorithm(calibrator, maximum_transitions = 1000, initial_parameters = None, candidate_set_size = 4, perturbation_factor = 1.0, transition_iterations = 5, number_of_transitions = 4, adaptation_weight = 0.9):
-    best_objective = np.inf
-    best_parameters = None
+def opdyts_algorithm(calibrator, candidate_set_size = 4, perturbation_factor = 1.0, transition_iterations = 5, number_of_transitions = 4, adaptation_weight = 0.9):
+    opdyts_iteration = 0
 
-    opdyts_iteration = 1
-    transitions = 1
     v, w = 0.0, 0.0
 
     adaptation_transient_performance = []
@@ -84,20 +84,24 @@ def opdyts_algorithm(calibrator, maximum_transitions = 1000, initial_parameters 
     adaptation_uniformity_gap = []
     adaptation_selection_performance = []
 
-    if initial_parameters is None:
-        initial_parameters = np.zeros((calibrator.problem.number_of_parameters,))
+    initial_parameters = np.copy(calibrator.problem.initial_parameters)
 
     # Run one iteration to get the initial state
-    initial_identifier = calibrator.schedule(initial_parameters, { "iterations": 1 })
+    logger.info("Initializing Opdyts.")
+    initial_identifier = calibrator.schedule(initial_parameters, { "iterations": 1 }, { "type": "initial", "transient": True })
     initial_objective, initial_state = calibrator.get(initial_identifier)
 
-    while transitions < maximum_transitions:
+    while not calibrator.finished:
+        opdyts_iteration += 1
+        logger.info("Starting Opdyts iteration %d." % opdyts_iteration)
+
         # Create new set of candidate parameters
         candidate_parameters = np.zeros((candidate_set_size, calibrator.problem.number_of_parameters))
 
         for c in range(candidate_set_size):
-            direction = np.random.randint(0, 2, calibrator.problem.number_of_parameters) - 0.5
-            candidate_parameters[c] = initial_parameters + direction * 2.0 * np.random.random() * perturbation_factor
+            #direction = np.random.randint(0, 2, calibrator.problem.number_of_parameters) - 0.5
+            #candidate_parameters[c] = initial_parameters + direction * 2.0 * np.random.random() * perturbation_factor
+            candidate_parameters[c] = initial_parameters + np.random.normal(size = (calibrator.problem.number_of_parameters,)) * perturbation_factor
 
         # Find initial candidate states
         candidate_identifiers = []
@@ -106,18 +110,22 @@ def opdyts_algorithm(calibrator, maximum_transitions = 1000, initial_parameters 
         candidate_objectives = np.zeros((candidate_set_size,))
         candidate_transitions = np.ones((candidate_set_size,))
 
+        annotations = {
+            "type": "candidates",
+            "v": v, "w": w, "transient": True, "opdyts_iteration": opdyts_iteration
+        }
+
         for c in range(candidate_set_size):
+            annotations.update({ "candidate": c })
             candidate_identifiers.append(calibrator.schedule(candidate_parameters[c], {
                 "iterations": transition_iterations,
                 "initial_identifier": initial_identifier
-            }))
-
-            transitions += transition_iterations
+            }, annotations))
 
         calibrator.wait()
 
         for c in range(candidate_set_size):
-            candidate_objectives[c], candidate_states[c] = calibrator.get(candidate_identifiers[c])
+            candidate_objectives[c], candidate_states[c] = calibrator.get(candidate_identifiers[c], transient = True)
             candidate_deltas[c] = candidate_states[c] - initial_state
 
         # Advance candidates
@@ -130,33 +138,47 @@ def opdyts_algorithm(calibrator, maximum_transitions = 1000, initial_parameters 
             selection_problem = ApproximateSelectionProblem(v, w, candidate_deltas, candidate_objectives)
             alpha = selection_problem.solve()
 
-            print("[Opdyts] Transient performance:", selection_problem.get_transient_performance(alpha), "Equilibrium gap:", selection_problem.get_equilibrium_gap(alpha), "Uniformity gap:", selection_problem.get_uniformity_gap(alpha))
+            transient_performance = selection_problem.get_transient_performance(alpha)
+            equilibrium_gap = selection_problem.get_equilibrium_gap(alpha)
+            uniformity_gap = selection_problem.get_uniformity_gap(alpha)
+
+            logger.info(
+                "Transient performance: %f, Equilibirum gap: %f, Uniformity_gap: %f",
+                transient_performance, equilibrium_gap, uniformity_gap)
 
             cumulative_alpha = np.cumsum(alpha)
             c = np.sum(np.random.random() > cumulative_alpha)
-            print("[Opdyts] Transition candidate", c)
+
+            logger.info("Transitioning candidate %d", c)
+            candidate_transitions[c] += 1
+            transient = candidate_transitions[c] < number_of_transitions
+
+            annotations.update({
+                "type": "transition",
+                "candidate": c, "transient_performance": transient_performance,
+                "equilibrium_gap": equilibrium_gap, "uniformity_gap": uniformity_gap,
+                "transient": transient
+            })
 
             # Advance selected candidate
             identifier = calibrator.schedule(candidate_parameters[c], {
                 "iterations": transition_iterations,
                 "initial_identifier": candidate_identifiers[c]
-            })
+            }, annotations)
 
-            new_objective, new_state = calibrator.get(identifier)
+            new_objective, new_state = calibrator.get(identifier, transient = transient)
             calibrator.cleanup(candidate_identifiers[c])
 
             candidate_deltas[c] = new_state - candidate_states[c]
             candidate_states[c], candidate_objectives[c] = new_state, new_objective
-
-            candidate_transitions[c] += 1
-            transitions += 1
+            candidate_identifiers[c] = identifier
 
             local_adaptation_transient_performance.append(selection_problem.get_transient_performance(alpha))
             local_adaptation_equilibrium_gap.append(selection_problem.get_equilibrium_gap(alpha))
             local_adaptation_uniformity_gap.append(selection_problem.get_uniformity_gap(alpha))
 
         index = np.argmax(candidate_transitions)
-        print("[Opdyts] Finished selection problem with candidate", index)
+        logger.info("Solved selection problem with candidate %d", index)
 
         for c in range(candidate_set_size):
             if c != index:
@@ -167,10 +189,6 @@ def opdyts_algorithm(calibrator, maximum_transitions = 1000, initial_parameters 
         initial_state = candidate_states[index]
         initial_parameters = candidate_parameters[index]
 
-        if candidate_objectives[index] < best_objective:
-            best_objective = candidate_objectives[index]
-            best_parameters = candidate_parameters[index]
-
         adaptation_selection_performance.append(candidate_objectives[index])
         adaptation_transient_performance.append(np.array(local_adaptation_transient_performance))
         adaptation_equilibrium_gap.append(np.array(local_adaptation_equilibrium_gap))
@@ -179,6 +197,4 @@ def opdyts_algorithm(calibrator, maximum_transitions = 1000, initial_parameters 
         adaptation_problem = AdaptationProblem(adaptation_weight, adaptation_selection_performance, adaptation_transient_performance, adaptation_equilibrium_gap, adaptation_uniformity_gap)
         v, w = adaptation_problem.solve()
 
-        print("[Opdyts] Adaptation Problem solved: v = ", v, ", w = ", w)
-
-    return best_parameters, best_objective
+        logger.info("Solved Adaptation Problem. v = %f, w = %f", v, w)

@@ -1,4 +1,5 @@
-import uuid, time
+import uuid, time, logging
+logger = logging.getLogger(__name__)
 
 class Simulator:
     def run(self, identifier, parameters):
@@ -10,8 +11,8 @@ class Simulator:
     def get_result(self, identifier):
         raise RuntimeError()
 
-    def get_progress(self, identifier):
-        return 0, 0
+    def get_cost(self, identifier):
+        return 1.0
 
     def cleanup(self, identifier):
         pass
@@ -47,6 +48,8 @@ class Scheduler:
         self.registry[identifier] = parameters
         self.pending.append(identifier)
 
+        logger.info("Scheduled simulation %s." % identifier)
+
         return identifier
 
     def _ping(self):
@@ -59,44 +62,42 @@ class Scheduler:
         for identifier in finished_identifiers:
             self.running.remove(identifier)
             self.finished.add(identifier)
+            logger.info("Finished simulation %s." % identifier)
 
         while len(self.running) < self.number_of_runners and len(self.pending) > 0:
             identifier = self.pending.pop(0)
             self.simulator.run(identifier, self.registry[identifier])
             self.running.add(identifier)
+            logger.info("Starting simulation %s." % identifier)
 
-    def wait(self, identifiers = None, verbose = True):
+    def wait(self, identifiers = None):
         if identifiers is None:
             identifiers = set(self.pending) | set(self.running)
         else:
             identifiers = set(identifiers)
 
-        previous_progress = None
+        previous_count = None
 
-        while len(identifiers - self.finished):
+        while len(identifiers - self.finished) > 0:
             self._ping()
             time.sleep(self.ping_time)
 
-            if verbose:
-                current, total = 0, 0
+            total_count = len(identifiers)
+            remaining_count = len(identifiers - self.finished)
+            finished_count = total_count - remaining_count
 
-                for identifier in identifiers:
-                    local_current, local_total = self.simulator.get_progress(identifier)
-                    current += local_current
-                    total += local_total
+            if finished_count != previous_count and finished_count < total_count:
+                previous_count = finished_count
+                logger.info("Waiting for simulations (%d/%d) ..." % (finished_count + 1, total_count))
 
-                if current != previous_progress and total > 0:
-                    print("Progress: %d / %d" % (current, total))
-                    previous_progress = current
+    def get_result(self, identifier):
+        self.wait([identifier])
+        return self.simulator.get_result(identifier)
 
-
-    def get(self, identifier, verbose = False):
-        self.wait([identifier], verbose = verbose)
-
-        return {
-            "result": self.simulator.get_result(identifier),
-            "parameters": self.registry[identifier]
-        }
+    def get_cost(self, identifier):
+        self.wait([identifier])
+        return self.simulator.get_cost(identifier)
 
     def cleanup(self, identifier):
         self.simulator.cleanup(identifier)
+        logger.info("Cleaned up simulation %s." % identifier)

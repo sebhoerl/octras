@@ -18,7 +18,7 @@ def test_fdsa():
     problem = RealDimensionalProblem(2)
 
     scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem)
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 1000)
 
-    parameters, objective = fdsa_algorithm(optimizer)
-    assert objective < 0.01
+    fdsa_algorithm(optimizer)
+    assert optimizer.best_objective < 0.01

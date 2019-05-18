@@ -1,31 +1,42 @@
 import numpy as np
 
-def spsa_algorithm(calibrator, maximum_iterations = 1000, initial_parameters = None, perturbation_factor = 1.0, perturbation_exponent = 0.5, gradient_factor = 1.0):
-    best_objective = np.inf
-    best_parameters = None
-    spsa_iteration = 1
+import logging
+logger = logging.getLogger(__name__)
 
-    if initial_parameters is None:
-        initial_parameters = np.zeros((calibrator.problem.number_of_parameters,))
+def spsa_algorithm(calibrator, perturbation_factor = 1.0, perturbation_exponent = 0.5, gradient_factor = 1.0, compute_objective = True):
+    spsa_iteration = 0
+    parameters = np.copy(calibrator.problem.initial_parameters)
 
-    parameters = np.copy(initial_parameters)
+    while not calibrator.finished:
+        spsa_iteration += 1
+        logger.info("Starting SPSA iteration %d." % spsa_iteration)
 
-    while spsa_iteration < maximum_iterations:
+        # Update step lengths
+        gradient_length = gradient_factor / spsa_iteration
+        perturbation_length = perturbation_factor / (spsa_iteration ** perturbation_exponent)
+
         # Sample direction from Rademacher distribution
         direction = np.random.randint(0, 2, calibrator.problem.number_of_parameters) - 0.5
-        perturbation_length = perturbation_factor / (spsa_iteration ** perturbation_exponent)
+
+        annotations = {
+            "perturbation_length": perturbation_length,
+            "gradient_length": gradient_length,
+            "direction": direction
+        }
 
         # Schedule samples
         positive_parameters = np.copy(parameters)
         positive_parameters += direction * perturbation_length
-        positive_identifier = calibrator.schedule(positive_parameters)
+        annotations.update({ "type": "positive_gradient" })
+        positive_identifier = calibrator.schedule(positive_parameters, annotations = annotations)
 
         negative_parameters = np.copy(parameters)
         negative_parameters -= direction * perturbation_length
-        negative_identifier = calibrator.schedule(negative_parameters)
+        annotations.update({ "type": "negative_gradient" })
+        negative_identifier = calibrator.schedule(negative_parameters, annotations = annotations)
 
         # Wait for gradient run results
-        calibrator.wait(verbose = False)
+        calibrator.wait()
 
         positive_objective, positive_state = calibrator.get(positive_identifier)
         calibrator.cleanup(positive_identifier)
@@ -35,20 +46,14 @@ def spsa_algorithm(calibrator, maximum_iterations = 1000, initial_parameters = N
 
         gradient = (positive_objective - negative_objective) / (2.0 * perturbation_length * direction)
 
-        # Update parameters
-        gradient_length = gradient_factor / spsa_iteration
+        # Update state
         parameters -= gradient_length * gradient
 
-        if positive_objective < best_objective:
-            print("Iteration %d, Objective %f" % (spsa_iteration, positive_objective))
-            best_objective = positive_objective
-            best_parameters = positive_parameters
+        if compute_objective:
+            annotations.update({ "type": "objective" })
+            identifier = calibrator.schedule(parameters, annotations = annotations)
 
-        if negative_objective < best_objective:
-            print("Iteration %d, Objective %f" % (spsa_iteration, negative_objective))
-            best_objective = negative_objective
-            best_parameters = negative_parameters
+            calibrator.wait()
 
-        spsa_iteration += 1
-
-    return best_parameters, best_objective
+            objective, state = calibrator.get(identifier)
+            calibrator.cleanup(identifier)
