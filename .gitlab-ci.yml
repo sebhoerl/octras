@@ -4,5 +4,5 @@ test:
        - virtualenv env
        - source env/bin/activate
        - cd octras
-       - python3 setup.py
+       - python3 setup.py install
        - pytest
