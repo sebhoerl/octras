@@ -8,12 +8,11 @@ optimization loop.
 Implemented optimization / calibration algorithms:
 
 - **Random walk**
-- **(FDSA)[1]** Finite Difference Stochastic Approximation
-- **(SPSA)[2]** Simultaneous Perturbation Stochastic Approximation
-- **(Opdyts)[3]** G. Flötteröd (2017) A search acceleration method for optimization problems with transport simulation constraints, Transportation Research Part B, 98, 239-260.
-**(CMA-ES)[4]** Covariance Matrix Adaptation Evolution Strategy
-- Opdyts
-**(scipy.optimize)[5]** All algorithms contained in the `scipy.optimize` package can be used.
+- **[FDSA][1]** Finite Difference Stochastic Approximation
+- **[SPSA][2]** Simultaneous Perturbation Stochastic Approximation
+- **[Opdyts][3]** G. Flötteröd (2017) A search acceleration method for optimization problems with transport simulation constraints, Transportation Research Part B, 98, 239-260.
+- **[CMA-ES][4]** Covariance Matrix Adaptation Evolution Strategy
+- **[scipy.optimize][5]** All algorithms contained in the `scipy.optimize` package can be used.
 
 # Running with MATSim
 
