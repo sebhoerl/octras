@@ -27,18 +27,26 @@ To run an optimization, the data linked above should be copied to the directory
 `simulation` inside of the `use_case` directory. Also, a directory `use_case/temp`
 should be created. Then, one can run:
 
-```PYTHONPATH=/path/to/repository_directory python3 run_use_case.py --problem mode_share --algorithm cma_es --log_path temp/log.p```
+```bash
+PYTHONPATH=/path/to/repository_directory python3 run_use_case.py --problem mode_share --algorithm cma_es --log_path temp/log.p
+```
 
 Multiple other options are available in the runs script (just run it without parameters).
 
 The `log.p` can be analysed with the following general script:
 
-```python3 plotting/plot_problem.py temp/log.p```
+```bash
+python3 plotting/plot_problem.py temp/log.p
+```
 
 or with custom scripts to get insights into the dynamics of specific algorithms:
 
-```python3 plotting/plot_spsa.py temp/log.p```
-```python3 plotting/plot_opdyts.py temp/log.p```
+```bash
+python3 plotting/plot_spsa.py temp/log.p
+```
+```bash
+python3 plotting/plot_opdyts.py temp/log.p
+```
 
 The latter will show, for instance, the uniformity gap and equlibirum gap that
 is used internall in *opdyts*.
