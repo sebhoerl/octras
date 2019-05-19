@@ -18,7 +18,7 @@ def test_random_walk():
     problem = RealDimensionalProblem(2)
 
     scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100, log_path = "/home/sebastian/rw.p")
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100)
 
     random_walk_algorithm(optimizer, [(-5.0, 5.0)] * 2)
     assert optimizer.best_objective < 1.0
