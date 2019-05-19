@@ -6,7 +6,7 @@ import tqdm
 SCENARIO_SHAPEFILE_PATH = "zurich_20km.shp"
 TRIPS_PATH = "/run/media/sebastian/shoerl_data/astra1802/analysis/reference/trips.csv"
 PERSONS_PATH = "/run/media/sebastian/shoerl_data/astra1802/analysis/reference/persons.csv"
-OUTPUT_PATH = "../use_case/simulation/reference.csv"
+OUTPUT_PATH = "../simulation/reference.csv"
 
 df = pd.read_csv(TRIPS_PATH, sep = ";")
 df_persons = pd.read_csv(PERSONS_PATH, sep = ";")[["person_id", "person_weight"]]
