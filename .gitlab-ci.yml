@@ -2,5 +2,4 @@ test:
    script:
        - source activate ivt
        - cd octras
-       - echo $(realpath $CI_PROJECT_PATH)
-       - PYTHONPATH=$(realpath $CI_PROJECT_PATH) pytest
+       - PYTHONPATH=$(realpath pwd) pytest
