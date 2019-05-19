@@ -1,5 +1,6 @@
 test:
    script:
+       - source activate ivt
        - virtualenv env
        - source env/bin/activate
        - cd octras
