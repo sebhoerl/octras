@@ -1,8 +1,6 @@
 test:
    script:
        - source activate ivt
-       - virtualenv env
-       - source env/bin/activate
        - cd octras
-       - python3 setup.py install
-       - pytest
+       - echo $(realpath $CI_PROJECT_PATH)
+       - PYTHONPATH=$(realpath $CI_PROJECT_PATH) pytest
