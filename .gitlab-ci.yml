@@ -1,4 +1,7 @@
 test:
    script:
-       - echo ${CI_PROJECT_DIR} 
-       - cd octras && PYTHONPATH=${CI_PROJECT_DIR} pytest
+       - virtualenv env
+       - source env/bin/activate
+       - cd octras
+       - python3 setup.py
+       - pytest
