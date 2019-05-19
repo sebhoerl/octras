@@ -1,3 +1,4 @@
 test:
    script:
-       - PYTHONPATH=${CI_PROJECT_DIR} pytest
+       - echo ${CI_PROJECT_DIR} 
+       - cd octras && PYTHONPATH=${CI_PROJECT_DIR} pytest
