@@ -2,6 +2,7 @@ import uuid, time
 import numpy as np
 import scipy.optimize
 
+from octras.tests.utils import RoadRailSimulator, RoadRailProblem
 from octras.tests.utils import QuadraticSumSimulator, RealDimensionalProblem
 from octras.simulation import Scheduler
 from octras.optimization import Optimizer
@@ -20,5 +21,21 @@ def test_scipy():
     scheduler = Scheduler(simulator, ping_time = 0.0)
     optimizer = Optimizer(scheduler, problem)
 
-    result = scipy_algorithm(optimizer)
-    assert result.success
+    scipy_algorithm(optimizer)
+    assert optimizer.best_objective < 1e-3
+
+def test_scipy_with_road():
+    np.random.seed(0)
+
+    simulator = RoadRailSimulator()
+    problem = RoadRailProblem()
+
+    default_parameters = {
+        "iterations": 200
+    }
+
+    scheduler = Scheduler(simulator, ping_time = 0.0, default_parameters = default_parameters)
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100)
+
+    scipy_algorithm(optimizer, method = "COBYLA")
+    assert optimizer.best_objective < 1e-3

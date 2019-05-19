@@ -142,6 +142,10 @@ def opdyts_algorithm(calibrator, candidate_set_size = 4, perturbation_factor = 1
             equilibrium_gap = selection_problem.get_equilibrium_gap(alpha)
             uniformity_gap = selection_problem.get_uniformity_gap(alpha)
 
+            local_adaptation_transient_performance.append(transient_performance)
+            local_adaptation_equilibrium_gap.append(equilibrium_gap)
+            local_adaptation_uniformity_gap.append(uniformity_gap)
+
             logger.info(
                 "Transient performance: %f, Equilibirum gap: %f, Uniformity_gap: %f",
                 transient_performance, equilibrium_gap, uniformity_gap)
@@ -172,10 +176,6 @@ def opdyts_algorithm(calibrator, candidate_set_size = 4, perturbation_factor = 1
             candidate_deltas[c] = new_state - candidate_states[c]
             candidate_states[c], candidate_objectives[c] = new_state, new_objective
             candidate_identifiers[c] = identifier
-
-            local_adaptation_transient_performance.append(selection_problem.get_transient_performance(alpha))
-            local_adaptation_equilibrium_gap.append(selection_problem.get_equilibrium_gap(alpha))
-            local_adaptation_uniformity_gap.append(selection_problem.get_uniformity_gap(alpha))
 
         index = np.argmax(candidate_transitions)
         logger.info("Solved selection problem with candidate %d", index)

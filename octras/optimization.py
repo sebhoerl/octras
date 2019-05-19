@@ -17,8 +17,14 @@ class OptimizationProblem:
     def evaluate(self, parameters, result):
         raise NotImplementedError()
 
+    def get_reference_state(self):
+        raise NotImplementedError()
+
+    def get_info(self):
+        return {}
+
 class Optimizer:
-    def __init__(self, scheduler, problem, tolerance = -1.0, maximum_evaluations = np.inf, maximum_cost = np.inf, history_path = None):
+    def __init__(self, scheduler, problem, tolerance = -1.0, maximum_evaluations = np.inf, maximum_cost = np.inf, log_path = None):
         self.scheduler = scheduler
         self.problem = problem
 
@@ -27,9 +33,9 @@ class Optimizer:
         self.results = {}
         self.annotations = {}
 
-        self.history_path = history_path
-        self.history = []
-        self.history_identifiers = set()
+        self.log_path = log_path
+        self.log = []
+        self.log_identifiers = set()
 
         self.finished = False
         self.success = False
@@ -64,18 +70,19 @@ class Optimizer:
         simulator_result = self.scheduler.get_result(identifier)
         objective, state = self.problem.evaluate(self.parameters[identifier], simulator_result)
 
-        if not identifier in self.history_identifiers:
-            self.history_identifiers.add(identifier)
+        if not identifier in self.log_identifiers:
+            self.log_identifiers.add(identifier)
             self.evaluations += 1
 
             cost = self.scheduler.get_cost(identifier)
             self.total_cost += cost
 
-            self.history.append({
+            self.log.append({
                 "state": state, "objective": objective,
                 "parameters": self.parameters[identifier],
                 "identifier": identifier, "annotations": self.annotations[identifier],
-                "evaluations": self.evaluations, "total_cost": self.total_cost, "cost": cost
+                "evaluations": self.evaluations, "total_cost": self.total_cost, "cost": cost,
+                "transient": transient
             })
 
             if self.evaluations > self.maximum_evaluations:
@@ -88,7 +95,7 @@ class Optimizer:
                 self.exit_criterion = "Maximum cost reached."
                 logger.warning("Maximum cost reached.")
 
-        if not transient and objective < self.best_objective:
+        if not self.finished and not transient and objective < self.best_objective:
             delta = self.best_objective - objective
             self.best_objective = objective
             self.best_parameters = self.parameters[identifier]
@@ -103,14 +110,18 @@ class Optimizer:
                 self.exit_criterion = "Tolerance reached."
                 logger.info("Tolerance reached. Successful optimization.")
 
-        if self.history_path is not None:
-            self.save(self.history_path)
+        if self.log_path is not None:
+            self.save(self.log_path)
 
         return objective, state
 
     def save(self, path):
         with open(path, "wb+") as f:
-            pickle.dump(self.history, f)
+            pickle.dump({
+                "log": self.log,
+                "reference": self.problem.get_reference_state(),
+                "problem": self.problem.get_info()
+            }, f)
 
     def cleanup(self, identifier):
         self.scheduler.cleanup(identifier)

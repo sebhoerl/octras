@@ -6,7 +6,7 @@ import tqdm
 SCENARIO_SHAPEFILE_PATH = "zurich_20km.shp"
 TRIPS_PATH = "/run/media/sebastian/shoerl_data/astra1802/analysis/reference/trips.csv"
 PERSONS_PATH = "/run/media/sebastian/shoerl_data/astra1802/analysis/reference/persons.csv"
-OUTPUT_PATH = "../simulation/reference.csv"
+OUTPUT_PATH = "../use_case/simulation/reference.csv"
 
 df = pd.read_csv(TRIPS_PATH, sep = ";")
 df_persons = pd.read_csv(PERSONS_PATH, sep = ";")[["person_id", "person_weight"]]
@@ -33,7 +33,11 @@ df_od = df_od[["person_id", "trip_id", "origin_scenario", "destination_scenario"
 df = pd.merge(df, df_od, how = "left", on = ["person_id", "trip_id"])
 
 df["travel_time"] = df["arrival_time"] - df["departure_time"]
-df = df[["mode", "crowfly_distance", "travel_time", "weight"]]
-df = df[df["crowfly_distance"] > 0]
+
+df = df[df["origin_scenario"] == "zh_20km"]
+df = df[df["destination_scenario"] == "zh_20km"]
+
+df["preceedingPurpose"] = "generic"
+df["followingPurpose"] = "generic"
 
 df.to_csv(OUTPUT_PATH, sep = ";", index = None)

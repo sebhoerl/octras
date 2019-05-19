@@ -3,10 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-history_path = sys.argv[1]
+log_path = sys.argv[1]
 
-with open(history_path, "rb") as f:
-    history = pickle.load(f)
+with open(log_path, "rb") as f:
+    data = pickle.load(f)
+
+log = data["log"]
 
 positive_costs = []
 positive_objectives = []
@@ -21,20 +23,20 @@ costs = []
 gradient_length = []
 perturbation_length = []
 
-for h in history:
-    if h["annotations"]["type"] == "positive_gradient":
-        positive_costs.append(h["total_cost"])
-        positive_objectives.append(h["objective"])
-    elif h["annotations"]["type"] == "negative_gradient":
-        negative_costs.append(h["total_cost"])
-        negative_objectives.append(h["objective"])
-    elif h["annotations"]["type"] == "objective":
-        objective_costs.append(h["total_cost"])
-        objectives.append(h["objective"])
+for item in log:
+    if item["annotations"]["type"] == "positive_gradient":
+        positive_costs.append(item["total_cost"])
+        positive_objectives.append(item["objective"])
+    elif item["annotations"]["type"] == "negative_gradient":
+        negative_costs.append(item["total_cost"])
+        negative_objectives.append(item["objective"])
+    elif item["annotations"]["type"] == "objective":
+        objective_costs.append(item["total_cost"])
+        objectives.append(item["objective"])
 
-    costs.append(h["total_cost"])
-    gradient_length.append(h["annotations"]["gradient_length"])
-    perturbation_length.append(h["annotations"]["perturbation_length"])
+    costs.append(item["total_cost"])
+    gradient_length.append(item["annotations"]["gradient_length"])
+    perturbation_length.append(item["annotations"]["perturbation_length"])
 
 plt.figure(dpi = 120, figsize = (6, 4))
 
@@ -50,7 +52,7 @@ plt.subplot(2,1,2)
 plt.plot(costs, gradient_length, label = "Gradient length")
 plt.plot(costs, perturbation_length, label = "Perturbation length")
 plt.grid()
-plt.xlabel("Transitions")
+plt.xlabel("Simulation cost")
 plt.legend(loc = "best")
 
 plt.tight_layout()

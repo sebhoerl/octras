@@ -24,7 +24,7 @@ class QuadraticSumSimulator(octras.simulation.Simulator):
         return False
 
     def get_result(self, identifier):
-        return self.results[identifier]
+        return np.array([self.results[identifier]])
 
 class RosenbrockSimulator(octras.simulation.Simulator):
     def __init__(self):
@@ -90,7 +90,7 @@ class RoadRailSimulator(octras.simulation.Simulator):
         return False
 
     def get_result(self, identifier):
-        return self.results[identifier]
+        return np.array([self.results[identifier]])
 
     def get_cost(self, identifier):
         return self.iterations[identifier]
@@ -105,6 +105,9 @@ class RoadRailProblem(octras.optimization.OptimizationProblem):
     def evaluate(self, parameters, simulator_result):
         return np.sum(np.abs(simulator_result - 0.75)**2), simulator_result
 
+    def get_reference_state(self):
+        return np.array([0.75])
+
 class RealDimensionalProblem(octras.optimization.OptimizationProblem):
     def __init__(self, dimensions):
         octras.optimization.OptimizationProblem.__init__(self, dimensions, 1, np.zeros((dimensions,)))
@@ -114,4 +117,7 @@ class RealDimensionalProblem(octras.optimization.OptimizationProblem):
         return { "x": parameters, "dimensions": self.dimensions }
 
     def evaluate(self, parameters, simulator_result):
-        return simulator_result, simulator_result
+        return simulator_result[0], simulator_result
+
+    def get_reference_state(self):
+        return np.array([0.0])

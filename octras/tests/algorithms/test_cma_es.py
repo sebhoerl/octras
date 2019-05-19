@@ -7,24 +7,21 @@ from octras.tests.utils import QuadraticSumSimulator, RealDimensionalProblem
 from octras.simulation import Scheduler
 from octras.optimization import Optimizer
 
-from octras.algorithms.random_walk import random_walk_algorithm
-from octras.algorithms.scipy import scipy_algorithm
-from octras.algorithms.spsa import spsa_algorithm
-from octras.algorithms.fdsa import fdsa_algorithm
+from octras.algorithms.cma_es import cma_es_algorithm
 
-def test_fdsa():
+def test_cma_es():
     np.random.seed(0)
 
     simulator = QuadraticSumSimulator([2.0, 4.0])
     problem = RealDimensionalProblem(2)
 
     scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100)
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 1000)
 
-    fdsa_algorithm(optimizer)
+    cma_es_algorithm(optimizer, candidate_set_size = 4)
     assert optimizer.best_objective < 1e-3
 
-def test_fdsa_with_road():
+def test_cma_es_with_road():
     np.random.seed(0)
 
     simulator = RoadRailSimulator()
@@ -37,5 +34,5 @@ def test_fdsa_with_road():
     scheduler = Scheduler(simulator, ping_time = 0.0, default_parameters = default_parameters)
     optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100)
 
-    fdsa_algorithm(optimizer, perturbation_factor = 100.0, gradient_factor = 100.0, perturbation_exponent = 0.9)
+    cma_es_algorithm(optimizer, candidate_set_size = 4)
     assert optimizer.best_objective < 1e-3
