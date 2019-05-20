@@ -54,11 +54,11 @@ scheduler = Scheduler(
 
 # Use mode share problem
 if cmd.problem == "mode_share":
-    problem = ModeShareProblem("%s/reference.csv" % cmd.simulation_path)
+    problem = ModeShareProblem(cmd.simulation_path)
 
 # Use travel time problem
 elif cmd.problem == "travel_time":
-    problem = TravelTimeProblem("%s/reference.csv" % cmd.simulation_path)
+    problem = TravelTimeProblem(cmd.simulation_path)
 
 else:
     raise RuntimeError("Unknown problem")

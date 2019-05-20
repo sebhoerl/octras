@@ -3,9 +3,10 @@ import numpy as np
 import pandas as pd
 
 class ModeShareProblem(octras.optimization.OptimizationProblem):
-    def __init__(self, reference_path):
+    def __init__(self, simulation_path):
         octras.optimization.OptimizationProblem.__init__(self, 3, 4, np.zeros((3,)))
 
+        reference_path = "%s/zurich_25pct/zurich_25pct_reference.csv" % simulation_path
         df_reference = pd.read_csv(reference_path, sep = ";")
         self.reference = self._compute_shares(df_reference)
 
@@ -48,10 +49,11 @@ class ModeShareProblem(octras.optimization.OptimizationProblem):
         return self.reference
 
 class TravelTimeProblem(octras.optimization.OptimizationProblem):
-    def __init__(self, reference_path, bounds = None, number_of_bounds = 5, maximum_travel_time = 60.0):
+    def __init__(self, simulation_path, bounds = None, number_of_bounds = 5, maximum_travel_time = 60.0):
         if bounds is not None: number_of_bounds = len(bounds)
         octras.optimization.OptimizationProblem.__init__(self, 3, number_of_bounds, np.zeros((3,)))
 
+        reference_path = "%s/zurich_25pct/zurich_25pct_reference.csv" % simulation_path
         df_reference = pd.read_csv(reference_path, sep = ";")
 
         if bounds is not None:
@@ -62,7 +64,12 @@ class TravelTimeProblem(octras.optimization.OptimizationProblem):
         self.reference = self._compute_distribution(df_reference)
 
     def _compute_bounds(self, df, number_of_bounds, maximum_travel_time):
-        #df = df[df["mode"] == "car"]
+        df = pd.DataFrame(df, copy = True)
+
+        if not "weight" in df:
+            df["weight"] = 1.0
+            
+        df = df[df["mode"] == "car"]
         df = df[df["travel_time"] / 60 <= maximum_travel_time]
 
         df = df[df["crowfly_distance"] > 0]
@@ -94,7 +101,7 @@ class TravelTimeProblem(octras.optimization.OptimizationProblem):
         df = df[df["preceedingPurpose"] != "outside"]
         df = df[df["followingPurpose"] != "outside"]
 
-        #df = df[df["mode"] == "car"]
+        df = df[df["mode"] == "car"]
 
         df["minutes"] = df["travel_time"] / 60.0
         df["classes"] = np.digitize(df["minutes"], self.bounds)
