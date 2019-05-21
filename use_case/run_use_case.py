@@ -24,9 +24,11 @@ parser.add_argument("--adaptation_weight", default = 0.9, type = float)
 parser.add_argument("--number_of_threads", default = 4, type = int)
 parser.add_argument("--default_number_of_iterations", default = 40, type = int)
 parser.add_argument("--default_sample_size", default = "1pm", choices = ["1pm", "1pct", "10pct", "25pct"])
+parser.add_argument("--reference_sample_size", default = "25pct", choices = ["1pm", "1pct", "10pct", "25pct"])
 parser.add_argument("--number_of_runners", default = 1, type = int)
 parser.add_argument("--working_directory", default = "temp")
 parser.add_argument("--java_path", default = "java")
+parser.add_argument("--java_memory", default = "10G")
 parser.add_argument("--simulation_path", default = "simulation")
 parser.add_argument("--log_path", default = None)
 parser.add_argument("--maximum_evaluations", default = np.inf, type = float)
@@ -37,6 +39,7 @@ np.random.seed(0)
 
 simulator = MATSimSimulator({
     "java_path": cmd.java_path,
+    "java_memory": cmd.java_memory,
     "working_directory": cmd.working_directory,
     "simulation_path": cmd.simulation_path,
     "number_of_threads": cmd.number_of_threads
@@ -54,11 +57,11 @@ scheduler = Scheduler(
 
 # Use mode share problem
 if cmd.problem == "mode_share":
-    problem = ModeShareProblem(cmd.simulation_path)
+    problem = ModeShareProblem(cmd.simulation_path, cmd.reference_sample_size)
 
 # Use travel time problem
 elif cmd.problem == "travel_time":
-    problem = TravelTimeProblem(cmd.simulation_path)
+    problem = TravelTimeProblem(cmd.simulation_path, cmd.reference_sample_size)
 
 else:
     raise RuntimeError("Unknown problem")

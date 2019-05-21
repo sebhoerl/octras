@@ -1,5 +1,8 @@
 mkdir -p temp
 
+# Folder "simulation" is expected to be in `pwd`. Otherwise the path to the
+# simulation folder can be specified using the --simulation_path flag.
+
 # Start optimization
 PYTHONPATH=$(realpath ..) python3 run_use_case.py --problem mode_share --algorithm opdyts --log_path temp/log.p
 

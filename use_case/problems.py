@@ -3,10 +3,13 @@ import numpy as np
 import pandas as pd
 
 class ModeShareProblem(octras.optimization.OptimizationProblem):
-    def __init__(self, simulation_path):
+    def __init__(self, simulation_path, reference_sample_size):
         octras.optimization.OptimizationProblem.__init__(self, 3, 4, np.zeros((3,)))
 
-        reference_path = "%s/zurich_25pct/zurich_25pct_reference.csv" % simulation_path
+        if not reference_sample_size in ("1pm", "1pct", "10pct", "25pct"):
+            raise RuntimeError("Reference sample size should be one of: 1pm, 1pct, 10pct, 25pct")
+
+        reference_path = "%s/zurich_%s/zurich_%s_reference.csv" % (simulation_path, reference_sample_size, reference_sample_size)
         df_reference = pd.read_csv(reference_path, sep = ";")
         self.reference = self._compute_shares(df_reference)
 
@@ -53,7 +56,10 @@ class TravelTimeProblem(octras.optimization.OptimizationProblem):
         if bounds is not None: number_of_bounds = len(bounds)
         octras.optimization.OptimizationProblem.__init__(self, 3, number_of_bounds, np.zeros((3,)))
 
-        reference_path = "%s/zurich_25pct/zurich_25pct_reference.csv" % simulation_path
+        if not reference_sample_size in ("1pm", "1pct", "10pct", "25pct"):
+            raise RuntimeError("Reference sample size should be one of: 1pm, 1pct, 10pct, 25pct")
+
+        reference_path = "%s/zurich_%s/zurich_%s_reference.csv" % (simulation_path, reference_sample_size, reference_sample_size)
         df_reference = pd.read_csv(reference_path, sep = ";")
 
         if bounds is not None:
@@ -68,7 +74,7 @@ class TravelTimeProblem(octras.optimization.OptimizationProblem):
 
         if not "weight" in df:
             df["weight"] = 1.0
-            
+
         df = df[df["mode"] == "car"]
         df = df[df["travel_time"] / 60 <= maximum_travel_time]
 
