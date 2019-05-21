@@ -11,7 +11,12 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
     sigma = initial_step_size
 
     # Selection parameters
-    L = 4 + int(np.floor(3 * np.log(N))) if candidate_set_size is None else candidate_set_size
+    L_default = 4 + int(np.floor(3 * np.log(N)))
+    L = L_default if candidate_set_size is None else candidate_set_size
+
+    if not candidate_set_size is None and candidate_set_size < L_default:
+        logger.warn("Using requested candidate set size %d (recommended is at least %d!)" % (candidate_set_size, L_default))
+
     mu = L / 2.0
     weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
     mu = int(np.floor(mu))
