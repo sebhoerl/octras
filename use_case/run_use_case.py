@@ -117,6 +117,8 @@ elif cmd.algorithm == "cma_es":
     from octras.algorithms.cma_es import cma_es_algorithm
 
     candidate_set_size = cmd.candidate_set_size
+    initial_step_size = cmd.initial_step_size
+
     cma_es_algorithm(optimizer, candidate_set_size, initial_step_size)
 
 else:
