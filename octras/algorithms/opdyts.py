@@ -76,7 +76,8 @@ class AdaptationProblem:
 
 def opdyts_algorithm(calibrator, candidate_set_size = 4, perturbation_factor = 1.0, transition_iterations = 5, number_of_transitions = 4, adaptation_weight = 0.9):
     opdyts_iteration = 0
-
+						long current = numberOfProcessedIslands.incrementAndGet();
+						logger.info(String.format("Processed island %d/%d ...", current, numberOfIslands));
     v, w = 0.0, 0.0
 
     adaptation_transient_performance = []
@@ -89,7 +90,7 @@ def opdyts_algorithm(calibrator, candidate_set_size = 4, perturbation_factor = 1
     # Run one iteration to get the initial state
     logger.info("Initializing Opdyts.")
     initial_identifier = calibrator.schedule(initial_parameters, { "iterations": 1 }, { "type": "initial", "transient": True })
-    initial_objective, initial_state = calibrator.get(initial_identifier)
+    initial_objective, initial_state = calibrator.get(initial_identifier, transient = True)
 
     while not calibrator.finished:
         opdyts_iteration += 1
