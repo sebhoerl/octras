@@ -33,6 +33,7 @@ parser.add_argument("--simulation_path", default = "simulation")
 parser.add_argument("--log_path", default = None)
 parser.add_argument("--maximum_evaluations", default = np.inf, type = float)
 parser.add_argument("--maximum_cost", default = np.inf, type = float)
+parser.add_argument("--initial_step_size", default = 0.3, type = float)
 cmd = parser.parse_args()
 
 np.random.seed(0)
@@ -116,7 +117,7 @@ elif cmd.algorithm == "cma_es":
     from octras.algorithms.cma_es import cma_es_algorithm
 
     candidate_set_size = cmd.candidate_set_size
-    cma_es_algorithm(optimizer, candidate_set_size)
+    cma_es_algorithm(optimizer, candidate_set_size, initial_step_size)
 
 else:
     raise RuntimeError("Unknown algorithm")
