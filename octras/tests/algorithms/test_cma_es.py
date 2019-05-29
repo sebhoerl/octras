@@ -16,7 +16,7 @@ def test_cma_es():
     problem = RealDimensionalProblem(2)
 
     scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 1000)
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 200)
 
     cma_es_algorithm(optimizer, candidate_set_size = 4)
     assert optimizer.best_objective < 1e-3

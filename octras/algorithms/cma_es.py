@@ -15,7 +15,7 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
     L = L_default if candidate_set_size is None else candidate_set_size
 
     if not candidate_set_size is None and candidate_set_size < L_default:
-        logger.warn("Using requested candidate set size %d (recommended is at least %d!)" % (candidate_set_size, L_default))
+        logger.warning("Using requested candidate set size %d (recommended is at least %d!)" % (candidate_set_size, L_default))
 
     mu = L / 2.0
     weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
@@ -97,13 +97,11 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
         pca = (1.0 - cc) * pc
         pcb = hsig * np.sqrt(cc * (2.0 - cc) * mueff) * (mean - previous_mean) / sigma
         pc = pca + pcb
-        pc = (1.0 - cc) + hsig * np.sqrt(cc * (2.0 - cc) * mueff) * (mean - previous_mean) / sigma
 
         # Adapt covariance matrix
         artmp = (1.0 / sigma) * candidate_parameters[:mu] - previous_mean
 
         Ca = (1.0 - c1 - cmu) * C
-        # TODO: Not sure if here the transpose are correct ...
         Cb = c1 * (np.dot(pc.T, pc) + (1.0 - hsig) * cc * (2.0 - cc) * C)
         Cc = cmu * np.dot(artmp.T, np.dot(np.diag(weights), artmp))
         C = Ca + Cb + Cc
