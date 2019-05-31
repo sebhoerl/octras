@@ -34,14 +34,20 @@ class RosenbrockSimulator(octras.simulation.Simulator):
         dimensions = parameters["dimensions"]
         x = parameters["x"]
 
-        value = sum([100 * (x[i + 1] - x[i]**2)**2 + (x[i] - 1)**2 for i in range(dimensions - 1)])
+        if len(x) != dimensions:
+            raise RuntimeError("Wrong dimension")
+
+        value = sum([
+            100 * (x[i + 1] - x[i]**2)**2 + (1 - x[i])**2
+            for i in range(dimensions - 1)
+        ])
         self.results[identifier] = value
 
     def is_running(self, identifier):
         return False
 
     def get_result(self, identifier):
-        return self.results[identifier]
+        return np.array([self.results[identifier]])
 
 class RoadRailSimulator(octras.simulation.Simulator):
     def __init__(self):

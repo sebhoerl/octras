@@ -4,10 +4,10 @@ import numpy.linalg as la
 import logging
 logger = logging.getLogger(__name__)
 
-def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 1.0):
+def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 0.3):
     # Initialize state
     N = calibrator.problem.number_of_parameters
-    mean = np.copy(calibrator.problem.initial_parameters)
+    mean = np.copy(calibrator.problem.initial_parameters).reshape((N,1))
     sigma = initial_step_size
 
     # Selection parameters
@@ -20,7 +20,7 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
     mu = L / 2.0
     weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
     mu = int(np.floor(mu))
-    weights = weights / np.sum(weights)
+    weights = weights[:mu] / np.sum(weights[:mu])
     mueff = np.sum(weights)**2 / np.sum(weights ** 2)
 
     # Adaptation parameters
@@ -31,8 +31,8 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
     damps = 1.0 + 2.0 * max(0, np.sqrt((mueff - 1.0) / (N + 1.0)) - 1.0) + cs
 
     # Initialize dynamic parameters
-    pc = np.zeros((1,N))
-    ps = np.zeros((1,N))
+    pc = np.zeros((N,1))
+    ps = np.zeros((N,1))
     B = np.eye(N)
     D = np.ones((N,))
     C = np.dot(B, np.dot(np.diag(D**2), B.T))
@@ -56,10 +56,8 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
 
         # Generate new samples
         counteval += L
-        candidate_parameters = np.array([
-            mean + sigma * np.dot(B, D *  np.random.normal(size = (N,)))
-            for k in range(L)
-        ]).reshape((L, N))
+
+        candidate_parameters = sigma * np.dot((np.random.normal(size = (N, L)) * D[:, np.newaxis]).T, B) + mean.T
 
         candidate_identifiers = [
             calibrator.schedule(parameters, annotations = annotations)
@@ -80,30 +78,32 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
             calibrator.cleanup(identifier)
 
         sorter = np.argsort(candidate_objectives)
-        candidate_objectives = candidate_objectives[sorter].reshape((L, -1))
+
+        candidate_objectives = candidate_objectives[sorter]
         candidate_parameters = candidate_parameters[sorter, :]
 
         # Update mean
         previous_mean = mean
-        mean = np.sum(candidate_parameters[:mu] * weights[:, np.newaxis], axis = 0).reshape((1, N))
+        mean = np.sum(candidate_parameters[:mu] * weights[:, np.newaxis], axis = 0).reshape((N, 1))
 
         # Update evolution paths
+
         psa = (1.0 - cs ) * ps
-        psb = np.sqrt(cs * (2.0 - cs) * mueff) * np.dot(invsqrtC, (mean - previous_mean).T) / sigma
+        psb = np.sqrt(cs * (2.0 - cs) * mueff) * np.dot(invsqrtC, mean - previous_mean) / sigma
         ps = psa + psb
 
         hsig = la.norm(ps) / np.sqrt(1.0 - (1.0 - cs)**(2.0 * counteval / L)) / chiN < 1.4 + 2.0 / (N + 1.0)
-
         pca = (1.0 - cc) * pc
         pcb = hsig * np.sqrt(cc * (2.0 - cc) * mueff) * (mean - previous_mean) / sigma
         pc = pca + pcb
 
         # Adapt covariance matrix
-        artmp = (1.0 / sigma) * candidate_parameters[:mu] - previous_mean
+        artmp = (1.0 / sigma) * (candidate_parameters[:mu].T - previous_mean)
+
 
         Ca = (1.0 - c1 - cmu) * C
-        Cb = c1 * (np.dot(pc.T, pc) + (1.0 - hsig) * cc * (2.0 - cc) * C)
-        Cc = cmu * np.dot(artmp.T, np.dot(np.diag(weights), artmp))
+        Cb = c1 * (np.dot(pc, pc.T) + (not hsig) * cc * (2.0 - cc) * C)
+        Cc = cmu * np.dot(artmp, np.dot(np.diag(weights), artmp.T))
         C = Ca + Cb + Cc
 
         # Adapt step size
@@ -118,3 +118,6 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
             Dm = np.diag(1.0 / np.sqrt(d))
 
             invsqrtC = np.dot(B.T, np.dot(Dm, B))
+
+        if np.max(D) > 1e7 * np.min(D):
+            logger.warning("Condition exceeds 1e14")
