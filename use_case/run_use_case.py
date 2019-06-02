@@ -34,9 +34,10 @@ parser.add_argument("--log_path", default = None)
 parser.add_argument("--maximum_evaluations", default = np.inf, type = float)
 parser.add_argument("--maximum_cost", default = np.inf, type = float)
 parser.add_argument("--initial_step_size", default = 0.3, type = float)
+parser.add_argument("--random_seed", default = 0, type = int)
 cmd = parser.parse_args()
 
-np.random.seed(0)
+np.random.seed(cmd.random_seed)
 
 simulator = MATSimSimulator({
     "java_path": cmd.java_path,
