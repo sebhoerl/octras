@@ -52,7 +52,7 @@ class ModeShareProblem(octras.optimization.OptimizationProblem):
         return self.reference
 
 class TravelTimeProblem(octras.optimization.OptimizationProblem):
-    def __init__(self, simulation_path, bounds = None, number_of_bounds = 5, maximum_travel_time = 60.0):
+    def __init__(self, simulation_path, reference_sample_size, bounds = None, number_of_bounds = 5, maximum_travel_time = 60.0):
         if bounds is not None: number_of_bounds = len(bounds)
         octras.optimization.OptimizationProblem.__init__(self, 3, number_of_bounds, np.zeros((3,)))
 
