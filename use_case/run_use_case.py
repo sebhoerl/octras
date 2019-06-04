@@ -35,6 +35,7 @@ parser.add_argument("--maximum_evaluations", default = np.inf, type = float)
 parser.add_argument("--maximum_cost", default = np.inf, type = float)
 parser.add_argument("--initial_step_size", default = 0.3, type = float)
 parser.add_argument("--random_seed", default = 0, type = int)
+parser.add_argument("--bounds", default = 2.0, type = float)
 cmd = parser.parse_args()
 
 np.random.seed(cmd.random_seed)
@@ -78,7 +79,7 @@ optimizer = Optimizer(
 # Use random walk
 if cmd.algorithm == "random_walk":
     from octras.algorithms.random_walk import random_walk_algorithm
-    bounds = [(-10.0, 10.0)] * 3
+    bounds = [(-cmd.bounds, cmd.bounds)] * 3
     random_walk_algorithm(optimizer, bounds)
 
 # Use FDSA
