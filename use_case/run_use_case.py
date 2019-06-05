@@ -79,7 +79,8 @@ optimizer = Optimizer(
 # Use random walk
 if cmd.algorithm == "random_walk":
     from octras.algorithms.random_walk import random_walk_algorithm
-    bounds = [(-cmd.bounds, cmd.bounds)] * 3
+    #bounds = [(-cmd.bounds, cmd.bounds)] * 3
+    bounds = [(-1.0, 1.0), (-1.0, 1.0), (0.0, 2.0)]
     random_walk_algorithm(optimizer, bounds)
 
 # Use FDSA
