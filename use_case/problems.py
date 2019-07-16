@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 
 class ModeShareProblem(octras.optimization.OptimizationProblem):
-    def __init__(self, simulation_path, reference_sample_size):
-        octras.optimization.OptimizationProblem.__init__(self, 3, 4, np.zeros((3,)))
+    def __init__(self, simulation_path, reference_sample_size, initial_parameters):
+        octras.optimization.OptimizationProblem.__init__(self, 3, 4, initial_parameters)
 
         if not reference_sample_size in ("1pm", "1pct", "10pct", "25pct"):
             raise RuntimeError("Reference sample size should be one of: 1pm, 1pct, 10pct, 25pct")
@@ -52,9 +52,9 @@ class ModeShareProblem(octras.optimization.OptimizationProblem):
         return self.reference
 
 class TravelTimeProblem(octras.optimization.OptimizationProblem):
-    def __init__(self, simulation_path, reference_sample_size, bounds = None, number_of_bounds = 5, maximum_travel_time = 60.0):
+    def __init__(self, simulation_path, reference_sample_size, bounds = None, number_of_bounds = 5, maximum_travel_time = 60.0, initial_parameters):
         if bounds is not None: number_of_bounds = len(bounds)
-        octras.optimization.OptimizationProblem.__init__(self, 3, number_of_bounds, np.zeros((3,)))
+        octras.optimization.OptimizationProblem.__init__(self, 3, number_of_bounds, initial_parameters)
 
         if not reference_sample_size in ("1pm", "1pct", "10pct", "25pct"):
             raise RuntimeError("Reference sample size should be one of: 1pm, 1pct, 10pct, 25pct")
