@@ -62,11 +62,11 @@ initial_parameters = np.array([0.0, 0.0, 1.0])
 
 # Use mode share problem
 if cmd.problem == "mode_share":
-    problem = ModeShareProblem(cmd.simulation_path, cmd.reference_sample_size, initial_parameters)
+    problem = ModeShareProblem(cmd.simulation_path, cmd.reference_sample_size, initial_parameters = initial_parameters)
 
 # Use travel time problem
 elif cmd.problem == "travel_time":
-    problem = TravelTimeProblem(cmd.simulation_path, cmd.reference_sample_size, initial_parameters)
+    problem = TravelTimeProblem(cmd.simulation_path, cmd.reference_sample_size, initial_parameters = initial_parameters)
 
 else:
     raise RuntimeError("Unknown problem")
