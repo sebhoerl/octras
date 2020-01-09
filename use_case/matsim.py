@@ -37,7 +37,7 @@ class MATSimSimulator(octras.simulation.Simulator):
             raise RuntimeError("Working directory must exist: %s" % self.working_directory)
 
         self.parameters.update({
-            "class_path": "%s/astra_2018_002-1.0.0.jar" % self.parameters["simulation_path"],
+            "class_path": "%s/switzerland-1.0.5.jar" % self.parameters["simulation_path"],
             "config_path": "%s/zurich_{sample_size}/zurich_config.xml" % self.parameters["simulation_path"]
         })
 
@@ -104,7 +104,7 @@ class MATSimSimulator(octras.simulation.Simulator):
         arguments = [
             parameters["java_path"], "-Xmx%s" % parameters["java_memory"],
             "-cp", parameters["class_path"],
-            "ch.ethz.matsim.projects.astra_2018_002.RunASTRA2018002",
+            "org.eqasim.switzerland.RunSimulation",
             "--config-path", parameters["config_path"].replace("{sample_size}", parameters["sample_size"]),
             "--config:controler.outputDirectory", "%s/output" % simulation_path,
             "--config:controler.lastIteration", str(parameters["iterations"]),
@@ -113,23 +113,15 @@ class MATSimSimulator(octras.simulation.Simulator):
             "--config:controler.writeEventsInterval", str(parameters["iterations"]),
             "--config:controler.writePlansInterval", str(parameters["iterations"]),
             "--config:global.randomSeed", str(parameters["random_seed"]),
-            #"--model", "ZERO"
         ]
-
-        scaling_factors = {
-            "1pm": 0.001, "1pct": 0.01, "10pct": 0.1, "25pct": 0.25
-        }
-
-        arguments += ["--config:qsim.flowCapacityFactor", str(scaling_factors[parameters["sample_size"]])]
-        arguments += ["--config:qsim.storageCapacityFactor", str(scaling_factors[parameters["sample_size"]])]
 
         if "config" in parameters:
             for option, value in parameters["config"].items():
                 arguments += ["--config:%s" % option, str(value)]
 
-        if "utilities" in parameters:
-            for utility, value in parameters["utilities"].items():
-                arguments += ["--utility:%s" % utility, str(value)]
+        if "mode-parameters" in parameters:
+            for utility, value in parameters["mode-parameters"].items():
+                arguments += ["--mode-parameter:%s" % utility, str(value)]
 
         if "initial_identifier" in parameters:
             initial_internal_identifier = self.identifier_mapping[parameters["initial_identifier"]]
@@ -148,10 +140,9 @@ class MATSimSimulator(octras.simulation.Simulator):
         arguments = [
             parameters["java_path"], "-Xmx%s" % parameters["java_memory"],
             "-cp", parameters["class_path"],
-            "ch.ethz.matsim.projects.astra_2018_002.analysis.trips.ConvertTripsFromEvents",
+            "org.eqasim.core.analysis.RunTripAnalysis",
             "--network-path", "%s/output/output_network.xml.gz" % simulation_path,
             "--events-path", "%s/output/output_events.xml.gz" % simulation_path,
-            "--network-path", "%s/output/output_network.xml.gz" % simulation_path,
             "--output-path", "%s/trips.csv" % simulation_path
         ]
 
@@ -206,8 +197,17 @@ class MATSimSimulator(octras.simulation.Simulator):
         return 0
 
     def get_cost(self, identifier):
+        cost_mapping = {
+            "1pm": 0.001,
+            "1pct": 0.01,
+            "10pct": 0.1,
+            "25pct": 0.25
+        }
+
         internal_identifier = self.identifier_mapping[identifier]
-        return self.simulation_parameters[internal_identifier]["iterations"]
+        parameters = self.simulation_parameters[internal_identifier]
+
+        return cost_mapping[parameters["sample_size"]] * parameters["iterations"]
 
     def cleanup(self, identifier):
         internal_identifier = self.identifier_mapping[identifier]

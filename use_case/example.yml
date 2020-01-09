@@ -1,0 +1,23 @@
+simulation_path: /home/shoerl/bo
+working_directory: /home/shoerl/bo/work
+
+simulation:
+  sample_size: 1pm
+  number_of_threads: 4
+  iterations: 40
+
+calibration:
+  decision_variables: constants
+  problem: total_mode_share
+  objective: hellinger
+  reference_sample_size: 1pm
+  output_path: /home/shoerl/bo/work/output.p
+
+scheduler:
+  number_of_runners: 1
+  ping_time: 1.0
+
+optimization:
+  algorithm: spsa
+  perturbation_factor: 0.2
+  gradient_factor: 1.0

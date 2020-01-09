@@ -3,26 +3,26 @@ import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 
-def fdsa_algorithm(calibrator, perturbation_factor = 1.0, perturbation_exponent = 0.5, gradient_factor = 1.0, compute_objective = True):
-    fdsa_iteration = 0
+# https://www.jhuapl.edu/spsa/PDF-SPSA/Spall_Implementation_of_the_Simultaneous.PDF
+def fdsa_algorithm(calibrator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = False):
+    iteration = 0
     parameters = np.copy(calibrator.problem.initial_parameters)
 
     while not calibrator.finished:
-        fdsa_iteration += 1
-        logger.info("Starting FDSA iteration %d." % fdsa_iteration)
+        logger.info("Starting FDSA iteration %d." % iteration)
 
         # Update lengths
-        perturbation_length = perturbation_factor / (fdsa_iteration ** perturbation_exponent)
-        gradient_length = gradient_factor / fdsa_iteration
+        gradient_length = gradient_factor / (iteration + 1 + gradient_offset)**gradient_exponent
+        perturbation_length = perturbation_factor / (iteration + 1)**perturbation_exponent
 
         annotations = {
-            "perturbation_length" : perturbation_length,
-            "gradient_length": gradient_length
+            "gradient_length" : gradient_length,
+            "perturbation_length": perturbation_length
         }
 
         # I) Calculate gradients
         gradient = np.zeros((calibrator.problem.number_of_parameters,))
-        gradient_identifiers = []
+        gradient_information = []
 
         # Schedule all necessary runs
         for d in range(calibrator.problem.number_of_parameters):
@@ -38,12 +38,12 @@ def fdsa_algorithm(calibrator, perturbation_factor = 1.0, perturbation_exponent 
             annotations.update({ "sign": "negative_gradient" })
             negative_identifier = calibrator.schedule(negative_parameters, annotations = annotations)
 
-            gradient_identifiers.append((positive_parameters, positive_identifier, negative_parameters, negative_identifier))
+            gradient_information.append((positive_parameters, positive_identifier, negative_parameters, negative_identifier))
 
         # Wait for gradient run results
         calibrator.wait()
 
-        for d, item in enumerate(gradient_identifiers):
+        for d, item in enumerate(gradient_information):
             positive_parameters, positive_identifier, negative_parameters, negative_identifier = item
 
             positive_objective, positive_state = calibrator.get(positive_identifier)
@@ -65,3 +65,5 @@ def fdsa_algorithm(calibrator, perturbation_factor = 1.0, perturbation_exponent 
 
             objective, state = calibrator.get(identifier)
             calibrator.cleanup(identifier)
+
+        iteration += 1

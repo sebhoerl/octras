@@ -4,6 +4,7 @@ import numpy.linalg as la
 import logging
 logger = logging.getLogger(__name__)
 
+# https://en.wikipedia.org/wiki/CMA-ES
 def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 0.3):
     # Initialize state
     N = calibrator.problem.number_of_parameters

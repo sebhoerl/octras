@@ -15,7 +15,7 @@ def test_opdyts():
     problem = RoadRailProblem()
 
     scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_cost = 200 * 10)
+    optimizer = Optimizer(scheduler, problem, maximum_cost = 10000)
 
-    opdyts_algorithm(optimizer, perturbation_factor = 2.0, transition_iterations = 10, number_of_transitions = 20)
+    opdyts_algorithm(optimizer, perturbation_length = 2.0, transition_iterations = 10, number_of_transitions = 20, candidate_set_size = 10)
     assert optimizer.best_objective < 1e-3

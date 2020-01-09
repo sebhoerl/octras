@@ -74,7 +74,7 @@ class AdaptationProblem:
 
         return result.x
 
-def opdyts_algorithm(calibrator, candidate_set_size = 4, perturbation_factor = 1.0, transition_iterations = 5, number_of_transitions = 4, adaptation_weight = 0.9):
+def opdyts_algorithm(calibrator, perturbation_length, transition_iterations, number_of_transitions, candidate_set_size, adaptation_weight = 0.9):
     opdyts_iteration = 0
     v, w = 0.0, 0.0
 
@@ -82,6 +82,9 @@ def opdyts_algorithm(calibrator, candidate_set_size = 4, perturbation_factor = 1
     adaptation_equilibrium_gap = []
     adaptation_uniformity_gap = []
     adaptation_selection_performance = []
+
+    if candidate_set_size % 2 != 0:
+        raise RuntimeError("Opdyts expects candiate set size as a multiple of 2")
 
     initial_parameters = np.copy(calibrator.problem.initial_parameters)
 
@@ -97,10 +100,10 @@ def opdyts_algorithm(calibrator, candidate_set_size = 4, perturbation_factor = 1
         # Create new set of candidate parameters
         candidate_parameters = np.zeros((candidate_set_size, calibrator.problem.number_of_parameters))
 
-        for c in range(candidate_set_size):
-            #direction = np.random.randint(0, 2, calibrator.problem.number_of_parameters) - 0.5
-            #candidate_parameters[c] = initial_parameters + direction * 2.0 * np.random.random() * perturbation_factor
-            candidate_parameters[c] = initial_parameters + np.random.normal(size = (calibrator.problem.number_of_parameters,)) * perturbation_factor
+        for c in range(0, candidate_set_size, 2):
+            direction = np.random.random(size = (calibrator.problem.number_of_parameters,)) * 2.0 - 1.0
+            candidate_parameters[c] = initial_parameters + direction * perturbation_length
+            candidate_parameters[c + 1] = initial_parameters + direction * perturbation_length
 
         # Find initial candidate states
         candidate_identifiers = []

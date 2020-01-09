@@ -18,10 +18,9 @@ class Simulator:
         pass
 
 class Scheduler:
-    def __init__(self, simulator, default_parameters = {}, number_of_runners = 1, ping_time = 1.0):
+    def __init__(self, simulator, number_of_runners = 1, ping_time = 1.0):
         self.number_of_runners = number_of_runners
         self.simulator = simulator
-        self.default_parameters = default_parameters
         self.ping_time = ping_time
 
         self.registry = {}
@@ -42,7 +41,6 @@ class Scheduler:
         identifier = self._create_identifier()
 
         parameters = {}
-        parameters.update(self.default_parameters)
         parameters.update(simulation_parameters)
 
         self.registry[identifier] = parameters

@@ -28,7 +28,7 @@ def test_cma_es_with_rosenbrock():
     simulator = RosenbrockSimulator()
     problem = RealDimensionalProblem(3)
 
-    scheduler = Scheduler(simulator, ping_time = 0.0, default_parameters = { "dimensions": 3 })
+    scheduler = Scheduler(simulator, ping_time = 0.0)
     optimizer = Optimizer(scheduler, problem, maximum_evaluations = 10000)
 
     cma_es_algorithm(optimizer)
@@ -38,13 +38,9 @@ def test_cma_es_with_road():
     np.random.seed(0)
 
     simulator = RoadRailSimulator()
-    problem = RoadRailProblem()
+    problem = RoadRailProblem({ "iterations": 200 })
 
-    default_parameters = {
-        "iterations": 200
-    }
-
-    scheduler = Scheduler(simulator, ping_time = 0.0, default_parameters = default_parameters)
+    scheduler = Scheduler(simulator, ping_time = 0.0)
     optimizer = Optimizer(scheduler, problem, maximum_evaluations = 200)
 
     cma_es_algorithm(optimizer, candidate_set_size = 4)

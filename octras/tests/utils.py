@@ -102,11 +102,15 @@ class RoadRailSimulator(octras.simulation.Simulator):
         return self.iterations[identifier]
 
 class RoadRailProblem(octras.optimization.OptimizationProblem):
-    def __init__(self):
+    def __init__(self, default_parameters = {}):
         octras.optimization.OptimizationProblem.__init__(self, 1, 1, np.zeros((1,)))
+        self.default_parameters = default_parameters
 
-    def get_simulator_parameters(self, parameters):
-        return { "toll": parameters[0] }
+    def get_simulator_parameters(self, values):
+        parameters = {}
+        parameters.update(self.default_parameters)
+        parameters.update({ "toll": values[0] })
+        return parameters
 
     def evaluate(self, parameters, simulator_result):
         return np.sum(np.abs(simulator_result - 0.75)**2), simulator_result
