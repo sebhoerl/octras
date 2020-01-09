@@ -16,7 +16,7 @@ def test_spsa():
     problem = RealDimensionalProblem(2)
 
     scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 300, log_path = "/home/shoerl/spsa.p")
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 300)
 
     spsa_algorithm(optimizer, perturbation_factor = 2e-2, gradient_factor = 0.2)
     assert optimizer.best_objective < 1e-3
