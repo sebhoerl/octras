@@ -26,7 +26,7 @@ pip3 install -e /path/to/octras/repository
 
 There are currently to use cases:
 
-- [Zurich](https://polybox.ethz.ch/index.php/s/Bh058pctP90ck0D) (only accessible from ETH Zurich)
+- [Zurich](https://polybox.ethz.ch/index.php/s/BTtgWYke7F7WPLg) (only accessible for ETH Zurich, password required)
 - Paris (publicly available, TODO!!!)
 
 You can download the data by clicking the link above and unpacking the archive
