@@ -63,6 +63,7 @@ class FidelityCollector:
 
                 identifiers.append(self.calibrator.schedule(p[:-1], fidelity_parameters, annotations = annotations))
 
+        self.calibrator.wait(identifiers)
         objectives = [self.calibrator.get(identifier)[0] for identifier in identifiers]
 
         for identifier in identifiers:
