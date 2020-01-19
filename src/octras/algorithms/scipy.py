@@ -12,4 +12,5 @@ def scipy_worker(x, calibrator):
 
 def scipy_algorithm(calibrator, **arguments):
     logger.info("Starting optimization with scipy.optimize.minimize")
-    return scipy.optimize.minimize(fun = scipy_worker, x0 = calibrator.problem.initial_parameters, args = (calibrator,), **arguments)
+    x0 = [p["initial"] for p in calibrator.problem.parameters]
+    return scipy.optimize.minimize(fun = scipy_worker, x0 = x0, args = (calibrator,), **arguments)

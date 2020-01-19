@@ -2,9 +2,9 @@ import uuid, time
 import numpy as np
 import scipy.optimize
 
-from octras.tests.utils import RoadRailSimulator, RoadRailProblem
-from octras.tests.utils import QuadraticSumSimulator, RealDimensionalProblem
-from octras.tests.utils import RosenbrockSimulator
+from ..utils import RoadRailSimulator, RoadRailProblem
+from ..utils import QuadraticSumSimulator, RealDimensionalProblem
+from ..utils import RosenbrockSimulator
 from octras.simulation import Scheduler
 from octras.optimization import Optimizer
 

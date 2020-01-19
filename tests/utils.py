@@ -103,7 +103,8 @@ class RoadRailSimulator(octras.simulation.Simulator):
 
 class RoadRailProblem(octras.optimization.OptimizationProblem):
     def __init__(self, default_parameters = {}):
-        octras.optimization.OptimizationProblem.__init__(self, 1, 1, np.zeros((1,)))
+        parameters = [{ "name": "toll", "initial": 0.0, "bounds": (0.0, 50.0) }]
+        octras.optimization.OptimizationProblem.__init__(self, 1, parameters)
         self.default_parameters = default_parameters
 
     def get_simulator_parameters(self, values):
@@ -120,7 +121,8 @@ class RoadRailProblem(octras.optimization.OptimizationProblem):
 
 class RealDimensionalProblem(octras.optimization.OptimizationProblem):
     def __init__(self, dimensions):
-        octras.optimization.OptimizationProblem.__init__(self, dimensions, 1, np.zeros((dimensions,)))
+        parameters = [{ "name": "x%d" % d, "initial": 0.0, "bounds": (-5.0, 5.0) } for d in range(dimensions)]
+        octras.optimization.OptimizationProblem.__init__(self, 1, parameters)
         self.dimensions = dimensions
 
     def get_simulator_parameters(self, parameters):

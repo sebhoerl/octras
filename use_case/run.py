@@ -1,5 +1,6 @@
 import problems, matsim, octras.simulation, octras.optimization
 import os, subprocess
+import numpy as np
 
 def verify_configuration(configuration):
     available_sample_sizes = ("1pm", "1pct", "10pct", "25pct")
@@ -125,7 +126,7 @@ def setup_problem(configuration):
             { "name": "bike.betaTravelTime_u_min", "initial": -0.1, "bounds": (-1.0, 0.0) },
             { "name": "bike.betaAgeOver18_u_a", "initial": -0.1, "bounds": (-1.0, 0.0) },
 
-            { "name": "walk_u.alpha_u", "initial": -0.1, "bounds": (-2.0, 2.0) },
+            { "name": "walk.alpha_u", "initial": -0.1, "bounds": (-2.0, 2.0) },
             { "name": "walk.betaTravelTime_u_min", "initial": -0.1, "bounds": (-1.0, 0.0) },
         ]
 
@@ -140,7 +141,7 @@ def setup_problem(configuration):
         state_names = modes = ["car", "pt", "bike", "walk"]
         state_calculator = problems.TotalModeShare(modes)
     elif configuration["problem"] == "car_travel_time":
-        bounds = np.array((5, 10, 15, 20, 25, 30)) * 60
+        bounds = np.array((322, 602, 1029, 1961))
         state_names = ["%dmin" % bound for bound in bounds]
         state_calculator = problems.TravelTimeDistribution(bounds, "car")
     elif configuration["problem"] == "mode_share_by_distance":
@@ -151,7 +152,11 @@ def setup_problem(configuration):
             { "mode": "walk", "bounds": [237.9035518860532, 388.7086955549104, 585.9770729303324, 926.1667506448283] },
         ]
         state_calculator = problems.ModeShareByDistance(mode_bounds)
-        state_names = sum([["%s_%d" (item["mode"], b) for b in item["bounds"]] for item in mode_bounds])
+
+        state_names = []
+
+        for item in mode_bounds:
+            state_names += ["%s_%d" % (item["mode"], b) for b in item["bounds"]]
 
     # Verify problem instance
     return problems.TripBasedProblem(
@@ -225,6 +230,8 @@ def run_experiment(optimizer, parameters, configuration):
         return run_cma_es(optimizer, configuration["optimization"])
     elif algorithm == "opdyts":
         return run_opdyts(optimizer, configuration["optimization"])
+    elif algorithm == "bo":
+        return run_bo(optimizer, configuration["optimization"])
     else:
         raise RuntimeError("Unknown algorithm: %s" % algorithm)
 
@@ -283,29 +290,46 @@ def run_cma_es(optimizer, configuration):
 def run_opdyts(optimizer, configuration):
     arguments = {}
 
-    if not "candidate_set_size" in configuration["optimization"]:
+    if not "candidate_set_size" in configuration:
         raise RuntimeError("Candidate set size must be set for opdyts")
 
-    if not "transition_iterations" in configuration["optimization"]:
+    if not "transition_iterations" in configuration:
         raise RuntimeError("Transition iterations be set for opdyts")
 
-    if not "number_of_transitions" in configuration["optimization"]:
+    if not "number_of_transitions" in configuration:
         raise RuntimeError("Number of transitions must be set for opdyts")
 
-    if not "adaptation_weight" in configuration["optimization"]:
+    if not "adaptation_weight" in configuration:
         raise RuntimeError("Perturbation length must be set for opdyts")
 
-    if not "perturbation_length" in configuration["optimization"]:
+    if not "perturbation_length" in configuration:
         raise RuntimeError("Adaptation weight must be set for opdyts")
 
-    arguments["candidate_set_size"] = configuration["optimization"]["candidate_set_size"]
-    arguments["transition_iterations"] = configuration["optimization"]["transition_iterations"]
-    arguments["number_of_transitions"] = configuration["optimization"]["number_of_transitions"]
-    arguments["adaptation_weight"] = configuration["optimization"]["adaptation_weight"]
-    arguments["perturbation_length"] = configuration["optimization"]["perturbation_length"]
+    arguments["candidate_set_size"] = configuration["candidate_set_size"]
+    arguments["transition_iterations"] = configuration["transition_iterations"]
+    arguments["number_of_transitions"] = configuration["number_of_transitions"]
+    arguments["adaptation_weight"] = configuration["adaptation_weight"]
+    arguments["perturbation_length"] = configuration["perturbation_length"]
 
     from octras.algorithms.opdyts import opdyts_algorithm
     opdyts_algorithm(optimizer, **arguments)
+
+def run_bo(optimizer, configuration):
+    arguments = {}
+
+    if not "method" in configuration:
+        raise RuntimeError("Method must be set for opdyts")
+
+    arguments["method"] = configuration["method"]
+
+    if "batch_size" in configuration:
+        arguments["batch_size"] = configuration["batch_size"]
+
+    if "initial_samples" in configuration:
+        arguments["initial_samples"] = configuration["initial_samples"]
+
+    from octras.algorithms.bo import bo_algorithm
+    bo_algorithm(optimizer, **arguments)
 
 def parse_arguments(args, configuration):
     if len(args) % 2 != 0:

@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 # https://www.jhuapl.edu/spsa/PDF-SPSA/Spall_Implementation_of_the_Simultaneous.PDF
 def spsa_algorithm(calibrator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = False):
     iteration = 0
-    parameters = np.copy(calibrator.problem.initial_parameters)
+    parameters = [p["initial"] for p in calibrator.problem.parameters]
 
     while not calibrator.finished:
         logger.info("Starting SPSA iteration %d." % iteration)
@@ -16,7 +16,7 @@ def spsa_algorithm(calibrator, perturbation_factor, gradient_factor, perturbatio
         perturbation_length = perturbation_factor / (iteration + 1)**perturbation_exponent
 
         # Sample direction from Rademacher distribution
-        direction = np.random.randint(0, 2, calibrator.problem.number_of_parameters) - 0.5
+        direction = np.random.randint(0, 2, len(parameters)) - 0.5
 
         annotations = {
             "gradient_length": gradient_length,

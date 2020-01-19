@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 # https://www.jhuapl.edu/spsa/PDF-SPSA/Spall_Implementation_of_the_Simultaneous.PDF
 def fdsa_algorithm(calibrator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = False):
     iteration = 0
-    parameters = np.copy(calibrator.problem.initial_parameters)
+    parameters = [p["initial"] for p in calibrator.problem.parameters]
 
     while not calibrator.finished:
         logger.info("Starting FDSA iteration %d." % iteration)
@@ -21,11 +21,11 @@ def fdsa_algorithm(calibrator, perturbation_factor, gradient_factor, perturbatio
         }
 
         # I) Calculate gradients
-        gradient = np.zeros((calibrator.problem.number_of_parameters,))
+        gradient = np.zeros((len(parameters),))
         gradient_information = []
 
         # Schedule all necessary runs
-        for d in range(calibrator.problem.number_of_parameters):
+        for d in range(len(parameters)):
             annotations.update({ "dimension": d })
 
             positive_parameters = np.copy(parameters)

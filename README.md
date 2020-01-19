@@ -18,6 +18,22 @@ Implemented optimization / calibration algorithms:
 
 For reference, there is a [use case](use_case/README.md) for MATSim that uses the framework.
 
+# Running the unit tests
+
+After cloning the repository, unit tests can be run with:
+
+```sh
+cd /path/to/repository
+
+virtualenv test_env
+source test_env/bin/activate
+
+pip install -e .
+pip3 install pytest
+
+python3 -m pytest tests
+```
+
 [1]: https://en.wikipedia.org/wiki/Simultaneous_perturbation_stochastic_approximation
 [2]: https://en.wikipedia.org/wiki/Simultaneous_perturbation_stochastic_approximation
 [3]: https://www.sciencedirect.com/science/article/pii/S0191261516302466

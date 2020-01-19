@@ -6,10 +6,10 @@ import copy
 logger = logging.getLogger(__name__)
 
 class OptimizationProblem:
-    def __init__(self, number_of_parameters, number_of_states, initial_parameters):
-        self.number_of_parameters = number_of_parameters
+    def __init__(self, number_of_states, parameters):
+        self.parameters = parameters
+        self.number_of_parameters = len(self.parameters)
         self.number_of_states = number_of_states
-        self.initial_parameters = initial_parameters
 
     def get_simulator_parameters(self, parameters):
         raise NotImplementedError()

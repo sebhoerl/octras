@@ -1,6 +1,7 @@
 test:
    script:
-       - source activate ivt
-       - project_directory=$(realpath $(pwd))
-       - cd octras
-       - PYTHONPATH=${project_directory} pytest
+       - virtualenv venv
+       - source venv/bin/activate
+       - pip install -e .
+       - pip install pytest
+       - python3 -m pytest tests

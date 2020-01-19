@@ -86,7 +86,7 @@ def opdyts_algorithm(calibrator, perturbation_length, transition_iterations, num
     if candidate_set_size % 2 != 0:
         raise RuntimeError("Opdyts expects candiate set size as a multiple of 2")
 
-    initial_parameters = np.copy(calibrator.problem.initial_parameters)
+    initial_parameters = [p["initial"] for p in calibrator.problem.parameters]
 
     # Run one iteration to get the initial state
     logger.info("Initializing Opdyts.")

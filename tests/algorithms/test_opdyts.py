@@ -1,6 +1,6 @@
 import numpy as np
 
-from octras.tests.utils import RoadRailSimulator, RoadRailProblem
+from ..utils import RoadRailSimulator, RoadRailProblem
 from octras.simulation import Scheduler
 from octras.optimization import Optimizer
 

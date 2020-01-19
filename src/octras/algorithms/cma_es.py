@@ -7,8 +7,10 @@ logger = logging.getLogger(__name__)
 # https://en.wikipedia.org/wiki/CMA-ES
 def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 0.3):
     # Initialize state
-    N = calibrator.problem.number_of_parameters
-    mean = np.copy(calibrator.problem.initial_parameters).reshape((N,1))
+    initial_parameters = [p["initial"] for p in calibrator.problem.parameters]
+    N = len(initial_parameters)
+
+    mean = np.copy(initial_parameters).reshape((N,1))
     sigma = initial_step_size
 
     # Selection parameters

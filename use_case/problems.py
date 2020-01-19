@@ -17,7 +17,7 @@ class TravelTimeDistribution:
         df = df[df["preceedingPurpose"] != "outside"]
         df = df[df["followingPurpose"] != "outside"]
 
-        df = df[df["mode"] == mode]
+        df = df[df["mode"] == self.mode]
 
         df["class"] = np.digitize(df["travel_time"], self.bounds)
         counts = np.array([np.sum(df[df["class"] == k]["weight"]) for k in range(len(self.bounds) + 1)])
@@ -62,10 +62,10 @@ class ModeShareByDistance:
         values = []
 
         for item in self.mode_bounds:
-            df["class"] = np.digitize(df["network_distance"], item["bounds"])
-
             f = df["mode"] == item["mode"]
-            values += [np.sum(df[df["class"] == k]["weight"]) for k in range(len(item["bounds"]) + 1)]
+
+            classes = np.digitize(df["network_distance"], item["bounds"])
+            values += [np.sum(df[f & (classes == k)]["weight"]) for k in range(len(item["bounds"]) + 1)]
 
         values = np.array(values)
         return values / np.sum(values)
@@ -80,9 +80,8 @@ class TripBasedProblem(octras.optimization.OptimizationProblem):
     def __init__(self, problem_name, state_calculator, state_names, objective_calculator, parameters, reference_path):
         number_of_parameters = len(parameters)
         number_of_states = len(state_names)
-        initial_parameters = [parameter["initial"] for parameter in parameters]
 
-        octras.optimization.OptimizationProblem.__init__(self, number_of_parameters, number_of_states, initial_parameters)
+        octras.optimization.OptimizationProblem.__init__(self, number_of_states, parameters)
 
         self.info = dict(
             problem_name = problem_name,
