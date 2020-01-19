@@ -1,5 +1,6 @@
 test:
    script:
+       - source activate ivt
        - virtualenv venv
        - source venv/bin/activate
        - pip install -e .
