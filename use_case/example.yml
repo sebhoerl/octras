@@ -30,5 +30,6 @@ optimization:
   method: mes
   batch_size: 4
   initial_samples: 4
+  fidelities: sample_size # Only used for MF-MES. Alternatives: sample_size, iterations
 
 #

@@ -318,7 +318,7 @@ def run_bo(optimizer, configuration):
     arguments = {}
 
     if not "method" in configuration:
-        raise RuntimeError("Method must be set for opdyts")
+        raise RuntimeError("Method must be set for Bayesian optimization")
 
     arguments["method"] = configuration["method"]
 
@@ -327,6 +327,26 @@ def run_bo(optimizer, configuration):
 
     if "initial_samples" in configuration:
         arguments["initial_samples"] = configuration["initial_samples"]
+
+    if arguments["method"] == "mfmes":
+        if not "fidelity" in configuration or not configuration["fidelity"] in ("sample_size", "iterations"):
+            raise RuntimeError("Fidelity must be set for MF-MES. Select from (sample_size, iterations).")
+
+        if configuration["fidelity"] == "sample_size":
+            fidelities = [
+                { "name": "1pm", "cost": 0.001, "parameters": { "sample_size": "1pm" } },
+                { "name": "1pct", "cost": 0.01, "parameters": { "sample_size": "1pct" } },
+                { "name": "10pct", "cost": 0.1, "parameters": { "sample_size": "10pct" } }
+            ]
+
+        if configuration["fidelity"] == "iterations":
+            fidelities = [
+                { "name": "20it", "cost": 20, "parameters": { "iterations": 20 } },
+                { "name": "40it", "cost": 40, "parameters": { "iterations": 40 } },
+                { "name": "80it", "cost": 80, "parameters": { "iterations": 80 } },
+            ]
+
+        arguments["fidelities"] = fidelities
 
     from octras.algorithms.bo import bo_algorithm
     bo_algorithm(optimizer, **arguments)
