@@ -33,7 +33,7 @@ class FidelityEvaluator:
         :param evaluator:
         :param fidelities: required for evaluation.
             If None, single fidelity setting is used.
-            Example: TODO
+            Example for MF setting: tests/test_bo -> test_multi_fidelity
         """
         self.evaluator = evaluator
         self.fidelities = fidelities
@@ -130,26 +130,13 @@ def define_GPmodel_mf(number_of_parameters, initial_x, initial_y, fidelities, nu
 
     return model
 
-"""
-This is the implementation of a Bayesion Optimization-based optimizer.
-
-There are three methods:
-- MES and GPBUCB for single-fidelity optimization
-- MFMES for multi-fidelity optimization
-
-For MFMES fidelities should be provided (see the respective unit test) in
-  tests/test_bo -> test_multi_fidelity
-
-@Anastasia
-Currently, the use_standard_kernels flag defines whether to use the standard
-kernels or the ones provided by you. I saw better convergence with the standard
-ones, but maybe I did something wrong (see below)!
-"""
-
-
 def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
                  fidelities=None, use_standard_kernels=True):
     """
+    Bayesion Optimization-based optimizer.
+    There are three methods:
+        - MES and GPBUCB for single-fidelity optimization
+        - MFMES for multi-fidelity optimization
 
     :param evaluator:
     :param batch_size:
@@ -159,7 +146,8 @@ def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, ini
             If int, no precollected data is used and initial_samples defines number of random samples to be generated
             for model initialization.
     :param method: string among "mes", "gpbucb", "mfmes"
-    :param fidelities:
+    :param fidelities: If None, single fidelity setting is used.
+            Example for MF setting: tests/test_bo -> test_multi_fidelity
     :param use_standard_kernels:
     :return:
     """
