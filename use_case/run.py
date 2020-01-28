@@ -2,6 +2,7 @@ import problems, matsim, octras.simulation, octras.optimization
 import os, subprocess
 import numpy as np
 
+
 def verify_configuration(configuration):
     available_sample_sizes = ("1pm", "1pct", "10pct", "25pct")
     available_decision_variables = ("constants", "vots", "all")
@@ -89,7 +90,7 @@ def verify_configuration(configuration):
 
     # Verify algorithm
     if not "algorithm" in optimization_configuration:
-        raise RuntimeError("Algorithm must be in (%s)" % ", ".join(available_algorithms))
+        raise RuntimeError("Algorithm must be in (%s)" % ", ".join('available_algorithms'))
 
     algorithm = optimization_configuration["algorithm"]
 
@@ -329,27 +330,32 @@ def run_bo(optimizer, configuration):
         arguments["initial_samples"] = configuration["initial_samples"]
 
     if arguments["method"] == "mfmes":
-        if not "fidelity" in configuration or not configuration["fidelity"] in ("sample_size", "iterations"):
+        if not "fidelities" in configuration or not configuration["fidelities"] in ("sample_size", "iterations"):
             raise RuntimeError("Fidelity must be set for MF-MES. Select from (sample_size, iterations).")
 
-        if configuration["fidelity"] == "sample_size":
+        if configuration["fidelities"] == "sample_size":
             fidelities = [
                 { "name": "1pm", "cost": 0.001, "parameters": { "sample_size": "1pm" } },
                 { "name": "1pct", "cost": 0.01, "parameters": { "sample_size": "1pct" } },
                 { "name": "10pct", "cost": 0.1, "parameters": { "sample_size": "10pct" } }
             ]
 
-        if configuration["fidelity"] == "iterations":
+        if configuration["fidelities"] == "iterations":
             fidelities = [
-                { "name": "20it", "cost": 20, "parameters": { "iterations": 20 } },
-                { "name": "40it", "cost": 40, "parameters": { "iterations": 40 } },
-                { "name": "80it", "cost": 80, "parameters": { "iterations": 80 } },
+                { "name": "10it", "cost": 1, "parameters": { "iterations": 10 } },
+                # { "name": "40it", "cost": 40, "parameters": { "iterations": 40 } },
+                { "name": "40it", "cost": 4, "parameters": { "iterations": 40} },
             ]
 
         arguments["fidelities"] = fidelities
 
-    from octras.algorithms.bo import bo_algorithm
-    bo_algorithm(optimizer, **arguments)
+    from octras.algorithms.bo import bo_algorithm, subdomain_bo_algorithm
+    if "subdomain_bo" in configuration and configuration["subdomain_bo"]:
+        arguments["subdomain_size"] = 3
+        arguments["num_subdomain_iters"] = 10
+        subdomain_bo_algorithm(optimizer, **arguments)
+    else:
+        bo_algorithm(optimizer, **arguments)
 
 def parse_arguments(args, configuration):
     if len(args) % 2 != 0:

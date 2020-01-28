@@ -16,6 +16,7 @@ from emukit.bayesian_optimization.acquisitions.minvalue_entropy_search import Mi
 
 from emukit.model_wrappers import GPyMultiOutputWrapper
 from emukit.core.optimization.multi_source_acquisition_optimizer import MultiSourceAcquisitionOptimizer
+from emukit.bayesian_optimization.acquisitions.entropy_search import MultiInformationSourceEntropySearch
 
 
 import GPy
@@ -23,7 +24,7 @@ import numpy as np
 
 
 def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
-                fidelities=None, use_standard_kernels=True):
+                fidelities=None, use_standard_kernels=False):
 
     bo = BO(evaluator, batch_size, num_restarts, update_interval, initial_samples, method,
                 fidelities=fidelities, use_standard_kernels=use_standard_kernels)
@@ -31,7 +32,7 @@ def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, ini
 
 
 def subdomain_bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
-                fidelities=None, use_standard_kernels=True, subdomain_size=2, num_subdomain_iters=1):
+                fidelities=None, use_standard_kernels=False, subdomain_size=2, num_subdomain_iters=1):
 
     bo = BO(evaluator, batch_size, num_restarts, update_interval, initial_samples, method,
                 fidelities=fidelities, use_standard_kernels=use_standard_kernels)
@@ -205,7 +206,7 @@ class BO:
 
         if self.method == "mfmes":
             cost_acquisition = Cost([f["cost"] for f in self.fidelities])
-            #     acquisition          = MultiInformationSourceEntropySearch(model, parameter_space) / cost_acquisition
+            # acquisition  = MultiInformationSourceEntropySearch(model, parameter_space) / cost_acquisition
             acquisition = MultiFidelityMinValueEntropySearch(model, parameter_space) / cost_acquisition
             gradient_optimizer = GradientAcquisitionOptimizer(space=parameter_space)
             optimizer = MultiSourceAcquisitionOptimizer(gradient_optimizer, space=parameter_space)
