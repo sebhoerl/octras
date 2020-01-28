@@ -23,6 +23,13 @@ class OptimizationProblem:
     def get_info(self):
         return {}
 
+"""
+@Sebastian: I doubt that Optimizer is the best way to call it.  
+In fact, there is no optimization happening, but rather scheduling, evaluation and logging. No?
+The name Optimizer make it confusing, because all the 'optimization machinery' 
+actually happens in bo.py, sma-_es.py,...
+Maybe ObjectiveEvaluator? 
+"""
 class Optimizer:
     def __init__(self, scheduler, problem, tolerance = -1.0, maximum_evaluations = np.inf, maximum_cost = np.inf, log_path = None):
         self.scheduler = scheduler

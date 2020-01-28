@@ -22,6 +22,14 @@ import GPy
 import numpy as np
 
 
+def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
+                fidelities=None, use_standard_kernels=True):
+
+    bo = BO(evaluator, batch_size, num_restarts, update_interval, initial_samples, method,
+                fidelities=fidelities, use_standard_kernels=use_standard_kernels)
+    bo.bo_run()
+
+
 class FidelityEvaluator:
     """
         A generalization over evaluator to get evaluations for different fidelity levels.
@@ -87,144 +95,208 @@ class EvaluatorStoppingCondition(StoppingCondition):
         return self.evaluator.finished
 
 
-def define_GPmodel_sf(use_standard_kernels, number_of_parameters, initial_x, initial_y, num_restarts=1):
-    kernel = None
-    if not use_standard_kernels:
-        # @ Anastasia: Here convergence is very poor if I use this kernel from the notebook. Did I do something wrong?
-        kernel = GPy.kern.sde_Matern52(number_of_parameters, lengthscale=1.0, variance=1.0, ARD=True)
-        kernel.variance.constrain_bounded(0.05, 0.1)
-        kernel.lengthscale.constrain_bounded(0, 0.1)
+class BO:
+    def __init__(self, evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
+                 GPmodel=None, fidelities=None, use_standard_kernels=True):
 
-    model = GPy.models.GPRegression(initial_x, initial_y, kernel)
-    model.Gaussian_noise.variance.fix(1e-3)
+        self.evaluator = evaluator
+        self.batch_size = batch_size
+        self.num_restarts = num_restarts
+        self.update_interval = update_interval
+        self.method = method
+        self.fidelities = fidelities
+        self.use_standard_kernels = use_standard_kernels
+        self.gp_model = GPmodel
 
-    model = GPyModelWrapper(model, n_restarts=num_restarts)
-    model.optimize()
+        if not self.method in ("mes", "gpbucb", "mfmes"):
+            raise RuntimeError("Wrong method: %s" % self.method)
 
-    return model
+        if self.method == "mfmes" and (self.fidelities is None or len(self.fidelities) == 0):
+            raise RuntimeError("Fidelities must be given for MF-MES")
 
+        # Set up parameter space
+        self.parameter_space_without_fidelity = [
+            ContinuousParameter(p["name"], p["bounds"][0], p["bounds"][1])
+            for p in self.evaluator.problem.parameters
+        ]
 
-def define_GPmodel_mf(number_of_parameters, initial_x, initial_y, fidelities, num_restarts=1):
-    kernel_low = GPy.kern.sde_Matern32(number_of_parameters, lengthscale=1.0, variance=0.2, ARD=True)
-    kernel_low.variance.constrain_bounded(0.05, 0.1)
-    kernel_low.lengthscale.constrain_bounded(0, 0.1)
+        if self.method == "mfmes":  # Add fidelity parameter if we set up MFMES
+            self.parameter_space = self.parameter_space_without_fidelity + \
+                                    [InformationSourceParameter(len(self.fidelities))]
+        else:
+            self.parameter_space = ParameterSpace(self.parameter_space_without_fidelity)
 
-    kernel_error = GPy.kern.sde_Matern52(number_of_parameters, lengthscale=1.0, variance=0.2, ARD=True)
-    kernel_error.lengthscale.constrain_bounded(0, 0.1)
-    kernel_error.variance.constrain_bounded(10e-5, 5.0 * 10e-5)
+        self.num_parameters = len(self.evaluator.problem.parameters)
 
-    kernel = LinearMultiFidelityKernel([kernel_low, kernel_error])
-    kernel.constrain_bounded(0.0, 1.0, 1.0)
-    kernel.scale.constrain_bounded(0.0, 0.6)
+        # Set up wrapper
+        self.fidelity_evaluator = FidelityEvaluator(self.evaluator, self.fidelities)
 
-    model = GPyLinearMultiFidelityModel(initial_x, initial_y, kernel, len(fidelities))
-    model.likelihood.Gaussian_noise.fix(5.0 * 1e-3)
-    model.likelihood.Gaussian_noise_1.fix(1e-3)
+        # Obtain initial sample
+        if type(initial_samples) == int:
+            design = RandomDesign(self.parameter_space)
+            self.initial_x = design.get_samples(initial_samples)
+            self.initial_y = self.fidelity_evaluator(self.initial_x)
+        else:
+            self.initial_x, self.initial_y = initial_samples
 
-    model = GPyMultiOutputWrapper(
-        model, n_outputs=len(fidelities),
-        n_optimization_restarts=num_restarts, verbose_optimization=False
+        # Set up model
+        if self.gp_model is None:
+            if method != "mfmes":
+                self.gp_model = self.define_gpmodel_sf(self.num_parameters,
+                                                       self.initial_x, self.initial_y, num_restarts=self.num_restarts)
+            else:
+                self.gp_model = define_gpmodel_mf(self.num_parameters, self.initial_x, self.initial_y,
+                                                       fidelities, num_restarts=num_restarts)
+
+        self.stopping_condition = EvaluatorStoppingCondition(evaluator)
+
+    @staticmethod
+    def define_gpmodel_mf(num_parameters, initial_x, initial_y, fidelities, num_restarts=1):
+
+        kernel_low = GPy.kern.sde_Matern32(num_parameters, lengthscale=1.0, variance=0.2, ARD=True)
+        kernel_low.variance.constrain_bounded(0.05, 0.1)
+        kernel_low.lengthscale.constrain_bounded(0, 0.1)
+
+        kernel_error = GPy.kern.sde_Matern52(num_parameters, lengthscale=1.0, variance=0.2, ARD=True)
+        kernel_error.lengthscale.constrain_bounded(0, 0.1)
+        kernel_error.variance.constrain_bounded(10e-5, 5.0 * 10e-5)
+
+        kernel = LinearMultiFidelityKernel([kernel_low, kernel_error])
+        kernel.constrain_bounded(0.0, 1.0, 1.0)
+        kernel.scale.constrain_bounded(0.0, 0.6)
+
+        model = GPyLinearMultiFidelityModel(initial_x, initial_y, kernel, len(fidelities))
+        model.likelihood.Gaussian_noise.fix(5.0 * 1e-3)
+        model.likelihood.Gaussian_noise_1.fix(1e-3)
+
+        model = GPyMultiOutputWrapper(
+            model, n_outputs=len(fidelities),
+            n_optimization_restarts=num_restarts, verbose_optimization=False
         )
 
-    model.optimize()
+        model.optimize()
 
-    return model
+        return model
 
-def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
-                 fidelities=None, use_standard_kernels=True):
-    """
-    Bayesion Optimization-based optimizer.
-    There are three methods:
-        - MES and GPBUCB for single-fidelity optimization
-        - MFMES for multi-fidelity optimization
+    def define_gpmodel_sf(self, num_parameters, initial_x, initial_y, num_restarts=1):
+        kernel = None
+        if not self.use_standard_kernels:
+            # @ Anastasia: Here convergence is very poor if I use this kernel from the notebook. Did I do something wrong?
+            kernel = GPy.kern.sde_Matern52(num_parameters, lengthscale=1.0, variance=1.0, ARD=True)
+            kernel.variance.constrain_bounded(0.05, 0.1)
+            kernel.lengthscale.constrain_bounded(0, 0.1)
 
-    :param evaluator:
-    :param batch_size:
-    :param num_restarts:
-    :param update_interval:
-    :param initial_samples: tuple or int. If tuple: (X,Y) defines precollected data to be used for model initialization.
-            If int, no precollected data is used and initial_samples defines number of random samples to be generated
-            for model initialization.
-    :param method: string among "mes", "gpbucb", "mfmes"
-    :param fidelities: If None, single fidelity setting is used.
-            Example for MF setting: tests/test_bo -> test_multi_fidelity
-    :param use_standard_kernels:
-    :return:
-    """
+        model = GPy.models.GPRegression(initial_x, initial_y, kernel)
+        model.Gaussian_noise.variance.fix(1e-3)
 
-    if not method in ("mes", "gpbucb", "mfmes"):
-        raise RuntimeError("Wrong method: %s" % method)
+        model = GPyModelWrapper(model, n_restarts=num_restarts)
+        model.optimize()
 
-    if method == "mfmes" and (fidelities is None or len(fidelities) == 0):
-        raise RuntimeError("Fidelities must be given for MF-MES")
+        return model
 
-    # Set up parameter space
-    parameter_space = [
-        ContinuousParameter(p["name"], p["bounds"][0], p["bounds"][1])
-        for p in evaluator.problem.parameters
-    ]
+    def get_bo_loop(self, model, parameter_space):
 
-    if method == "mfmes": # Add fidelity parameter if we set up MFMES
-        parameter_space.append(InformationSourceParameter(len(fidelities)))
+        if self.method == "mfmes":
+            cost_acquisition = Cost([f["cost"] for f in self.fidelities])
+            #     acquisition          = MultiInformationSourceEntropySearch(model, parameter_space) / cost_acquisition
+            acquisition = MultiFidelityMinValueEntropySearch(model, parameter_space) / cost_acquisition
+            gradient_optimizer = GradientAcquisitionOptimizer(space=parameter_space)
+            optimizer = MultiSourceAcquisitionOptimizer(gradient_optimizer, space=parameter_space)
+            point_calculator = GreedyBatchPointCalculator(model=model,
+                                                          acquisition=acquisition,
+                                                          acquisition_optimizer=optimizer,
+                                                          batch_size=self.batch_size)
+        else:
+            if self.method == "mes":
+                acquisition = MinValueEntropySearch(model=model, space=parameter_space)
 
-    parameter_space = ParameterSpace(parameter_space)
-    number_of_parameters = len(evaluator.problem.parameters)
+            elif self.method == "gpbucb":
+                acquisition = NegativeLowerConfidenceBound(model=model)
 
-    # Set up wrapper
-    fidelity_evaluator = FidelityEvaluator(evaluator, fidelities)
+            optimizer = GradientAcquisitionOptimizer(space=parameter_space)
+            point_calculator = GreedyBatchPointCalculator(model=model,
+                                                          acquisition=acquisition,
+                                                          acquisition_optimizer=optimizer,
+                                                          batch_size=self.batch_size)
 
-    # Obtain initial sample
-    if type(initial_samples) == int:
-        design = RandomDesign(parameter_space)
-        initial_x = design.get_samples(initial_samples)
-        initial_y = fidelity_evaluator(initial_x)
-    else:
-        initial_x, initial_y = initial_samples
+        bayesopt_loop = BayesianOptimizationLoop(model=model,
+                                                 space=parameter_space,
+                                                 acquisition=acquisition,
+                                                 batch_size=self.batch_size,
+                                                 update_interval=self.update_interval,
+                                                 candidate_point_calculator=point_calculator)
 
-    # Set up model
-    if method != "mfmes":
-        model = define_GPmodel_sf(use_standard_kernels, number_of_parameters,
-                                  initial_x, initial_y, num_restarts=num_restarts)
+        return bayesopt_loop
 
-    else:
-        model = define_GPmodel_mf(number_of_parameters, initial_x, initial_y,
-                                  fidelities, num_restarts=num_restarts)
+    def bo_run(self, model=self.gp_model):
 
-    # Set up BO loop
+        # Set up BO loop
+        bo_loop = self.get_bo_loop(model, self.parameter_space)
+        bo_loop.run_loop(self.fidelity_evaluator, self.stopping_condition)
 
-    if method == "mfmes":
-        cost_acquisition = Cost([f["cost"] for f in fidelities])
-        #     acquisition          = MultiInformationSourceEntropySearch(model, parameter_space) / cost_acquisition
-        acquisition = MultiFidelityMinValueEntropySearch(model, parameter_space) / cost_acquisition
-        gradient_optimizer = GradientAcquisitionOptimizer(space=parameter_space)
-        optimizer = MultiSourceAcquisitionOptimizer(gradient_optimizer, space=parameter_space)
-        point_calculator = GreedyBatchPointCalculator(model=model,
-                                                      acquisition=acquisition,
-                                                      acquisition_optimizer=optimizer,
-                                                      batch_size=batch_size)
-    else:
-        if method == "mes":
-            acquisition = MinValueEntropySearch(model=model, space=parameter_space)
+    def highdim_bo_run(self, subdomain_size=1, num_subdomain_iters=10):
+        """
 
-        elif method == "gpbucb":
-            acquisition = NegativeLowerConfidenceBound(model=model)
+        :param subdomain_size: int, size of subdomain to perform iterative BO on
+        :param num_subdomain_iters: int,
+        :return:
+        """
 
-        optimizer = GradientAcquisitionOptimizer(space=parameter_space)
-        point_calculator = GreedyBatchPointCalculator(model=model,
-                                                      acquisition=acquisition,
-                                                      acquisition_optimizer=optimizer,
-                                                      batch_size=batch_size)
+        values_ = self.parameter_space_without_fidelity.sample_uniform(point_count=1)[0]
+        for k in range(num_subdomain_iters):
 
-    bayesopt_loop = BayesianOptimizationLoop(model=model,
-                                             space=parameter_space,
-                                             acquisition=acquisition,
-                                             batch_size=batch_size,
-                                             update_interval=update_interval,
-                                             candidate_point_calculator=point_calculator)
+            parameter_space = self.parameter_space
+            x, y = self.initial_x, self.initial_y
+            coordinates = np.arange(self.num_parameters)
+            j = 0
+            while len(coordinates) > 0:
+                subdomain = np.random.choice(coordinates, min(len(coordinates), subdomain_size))
+                parameter_space = self.update_param_space(parameter_space, subdomain, values_)
 
-    stopping_condition = EvaluatorStoppingCondition(evaluator)
+                if self.method != "mfmes":
+                    gp_model = self.define_gpmodel_sf(self.num_parameters, x, y, num_restarts=self.num_restarts)
+                else:
+                    gp_model = define_gpmodel_mf(self.num_parameters, x, y,
+                                                     self.fidelities, num_restarts=self.num_restarts)
 
-    bayesopt_loop.run_loop(fidelity_evaluator, stopping_condition)
+                bo_loop = self.get_bo_loop(gp_model, parameter_space)
+                bo_loop.run_loop(self.fidelity_evaluator, self.stopping_condition)
+
+                # update data for the next round
+                x, y = bo_loop.loop_state.X,  bo_loop.loop_state.Y
+
+                values_[subdomain] = bo_loop.get_results().minimum_location[subdomain]
+                coordinates = np.delete(coordinates, subdomain)
+                j += 1
+
+    def update_param_space(self, parameter_space, subdomain, values):
+        """
+
+        :param parameter_space:
+        :param subdomain: optimization subdomain
+        :param values: best values for the whole domain
+        :return:
+        """
+
+        new_parameter_space = [
+                                ContinuousParameter(p.name, p.bounds[0][0], p.bounds[0][1]) if i in subdomain
+                                else ContinuousParameter(p.name, values[i], values[i])
+                                for i, p in enumerate(parameter_space.parameters)
+                                ]
+        if self.method == "mfmes":
+            return ParameterSpace(
+                new_parameter_space + [InformationSourceParameter(len(self.fidelities))])
+        else:
+            return ParameterSpace(new_parameter_space)
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,6 +1,4 @@
-import uuid, time
 import numpy as np
-import scipy.optimize
 import warnings
 
 from ..utils import RoadRailSimulator, RoadRailProblem
@@ -61,10 +59,10 @@ def test_bo_multi_fidelity():
     # to see the progress of the optimization. But as I wrote in the algorithm
     # file, you can also write custom information into the p file for each sample
     # and then analyze/visualize it.
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100, log_path = "/home/shoerl/mfmes.p")
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100, log_path = "/home/anmakaro/matsim/oc-matsim/tests/mfmes.p")
 
-    # @ Anastasia: This is how the fidelity levels are defined. Basically, they get a name,
-    # a cost, and a set of parameters that are specific to this fidelity level.
+    # @Sebastian: maybe we need a special class for fidelities to standartise it?
+    # fidelity is defines by name, cost, and a set of parameters that are specific to this fidelity level
     fidelities = [
         { "parameters": { "iterations": 50 }, "name": "it50", "cost": 50 },
         { "parameters": { "iterations": 100 }, "name": "it100", "cost": 100 },

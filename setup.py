@@ -16,6 +16,7 @@ setup(
         "matplotlib>=3.1.2",
         "pyDOE>=0.3.8",
         "PyYAML>=5.1.2",
+        "numpy"
     ],
     dependency_links=['https://github.com/Avidereta/emukit/tarball/my_contributions#egg=emukit-1.4.1'],
     extras_require = {
