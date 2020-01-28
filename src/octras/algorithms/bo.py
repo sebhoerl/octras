@@ -9,7 +9,7 @@ from emukit.bayesian_optimization.acquisitions import NegativeLowerConfidenceBou
 from emukit.core.optimization import GradientAcquisitionOptimizer
 from emukit.bayesian_optimization.loops.bayesian_optimization_loop import BayesianOptimizationLoop
 from emukit.core.loop.candidate_point_calculators import GreedyBatchPointCalculator
-from emukit.core.initial_designs import RandomDesign
+from emukit.experimental_design.model_free.random_design import RandomDesign
 
 from emukit.core.loop.stopping_conditions import StoppingCondition
 from emukit.bayesian_optimization.acquisitions.minvalue_entropy_search import MinValueEntropySearch, Cost, MultiFidelityMinValueEntropySearch
@@ -121,8 +121,8 @@ class BO:
         ]
 
         if self.method == "mfmes":  # Add fidelity parameter if we set up MFMES
-            self.parameter_space = self.parameter_space_without_fidelity + \
-                                    [InformationSourceParameter(len(self.fidelities))]
+            self.parameter_space = ParameterSpace(self.parameter_space_without_fidelity + \
+                                    [InformationSourceParameter(len(self.fidelities))])
         else:
             self.parameter_space = ParameterSpace(self.parameter_space_without_fidelity)
 
@@ -145,7 +145,7 @@ class BO:
                 self.gp_model = self.define_gpmodel_sf(self.num_parameters,
                                                        self.initial_x, self.initial_y, num_restarts=self.num_restarts)
             else:
-                self.gp_model = define_gpmodel_mf(self.num_parameters, self.initial_x, self.initial_y,
+                self.gp_model = self.define_gpmodel_mf(self.num_parameters, self.initial_x, self.initial_y,
                                                        fidelities, num_restarts=num_restarts)
 
         self.stopping_condition = EvaluatorStoppingCondition(evaluator)
@@ -228,9 +228,11 @@ class BO:
 
         return bayesopt_loop
 
-    def bo_run(self, model=self.gp_model):
+    def bo_run(self, model=None):
 
         # Set up BO loop
+        if model is None:
+            model = self.gp_model
         bo_loop = self.get_bo_loop(model, self.parameter_space)
         bo_loop.run_loop(self.fidelity_evaluator, self.stopping_condition)
 
