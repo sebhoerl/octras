@@ -30,6 +30,13 @@ def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, ini
     bo.bo_run()
 
 
+def subdomain_bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
+                fidelities=None, use_standard_kernels=True, subdomain_size=2, num_subdomain_iters=1):
+
+    bo = BO(evaluator, batch_size, num_restarts, update_interval, initial_samples, method,
+                fidelities=fidelities, use_standard_kernels=use_standard_kernels)
+    bo.subdomain_bo_run(subdomain_size, num_subdomain_iters)
+
 class FidelityEvaluator:
     """
         A generalization over evaluator to get evaluations for different fidelity levels.
@@ -236,7 +243,7 @@ class BO:
         bo_loop = self.get_bo_loop(model, self.parameter_space)
         bo_loop.run_loop(self.fidelity_evaluator, self.stopping_condition)
 
-    def highdim_bo_run(self, subdomain_size=1, num_subdomain_iters=10):
+    def subdomain_bo_run(self, subdomain_size=1, num_subdomain_iters=20):
         """
 
         :param subdomain_size: int, size of subdomain to perform iterative BO on
@@ -244,7 +251,7 @@ class BO:
         :return:
         """
 
-        values_ = self.parameter_space_without_fidelity.sample_uniform(point_count=1)[0]
+        values_ = ParameterSpace(self.parameter_space_without_fidelity).sample_uniform(point_count=1)[0]
         for k in range(num_subdomain_iters):
 
             parameter_space = self.parameter_space
@@ -258,7 +265,7 @@ class BO:
                 if self.method != "mfmes":
                     gp_model = self.define_gpmodel_sf(self.num_parameters, x, y, num_restarts=self.num_restarts)
                 else:
-                    gp_model = define_gpmodel_mf(self.num_parameters, x, y,
+                    gp_model = self.define_gpmodel_mf(self.num_parameters, x, y,
                                                      self.fidelities, num_restarts=self.num_restarts)
 
                 bo_loop = self.get_bo_loop(gp_model, parameter_space)
@@ -280,16 +287,21 @@ class BO:
         :return:
         """
 
+        calibrated_params = []
+        fidelity_param = []
+
+        for p in parameter_space.parameters:
+            if p.name == 'source':
+                fidelity_param.append(p)
+            else:
+                calibrated_params.append(p)
+
         new_parameter_space = [
                                 ContinuousParameter(p.name, p.bounds[0][0], p.bounds[0][1]) if i in subdomain
                                 else ContinuousParameter(p.name, values[i], values[i])
-                                for i, p in enumerate(parameter_space.parameters)
+                                for i, p in enumerate(calibrated_params)
                                 ]
-        if self.method == "mfmes":
-            return ParameterSpace(
-                new_parameter_space + [InformationSourceParameter(len(self.fidelities))])
-        else:
-            return ParameterSpace(new_parameter_space)
+        return ParameterSpace(new_parameter_space + fidelity_param)
 
 
 

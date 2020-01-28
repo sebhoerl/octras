@@ -10,7 +10,7 @@ setup(
     packages = find_packages(where = "src"),
     install_requires = [
         "GPy>=1.9.9",
-        "emukit@https://github.com/Avidereta/emukit/tarball/my_contributions", # github version with the link in dependency_links
+        "emukit@https://github.com/Avidereta/emukit/tarball/my_contributions", #works with pip install (not python setup.py)
         "scipy==1.1.0", # Necessary for emukit
         "pandas>=0.25.3",
         "matplotlib>=3.1.2",
