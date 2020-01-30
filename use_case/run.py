@@ -224,7 +224,7 @@ def run_experiment(optimizer, parameters, configuration):
     algorithm = configuration["optimization"]["algorithm"]
 
     if algorithm == "random_walk":
-        return run_random_walk(optimizer, parameters)
+        return run_random_walk(optimizer, configuration["optimization"])
     elif algorithm == "fdsa" or algorithm == "spsa":
         return run_fdsa_spsa(algorithm, optimizer, configuration["optimization"])
     elif algorithm == "cma_es":
