@@ -237,8 +237,13 @@ def run_experiment(optimizer, parameters, configuration):
         raise RuntimeError("Unknown algorithm: %s" % algorithm)
 
 def run_random_walk(optimizer, parameters):
+    arguments = {}
+
+    if "parallel_samples" in parameters:
+        arguments["parallel_samples"] = parmeters["parallel_samples"]
+
     from octras.algorithms.random_walk import random_walk_algorithm
-    random_walk_algorithm(optimizer)
+    random_walk_algorithm(optimizer, **arguments)
 
 def run_fdsa_spsa(algorithm, optimizer, configuration):
     arguments = {}
