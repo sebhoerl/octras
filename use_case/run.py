@@ -236,11 +236,11 @@ def run_experiment(optimizer, parameters, configuration):
     else:
         raise RuntimeError("Unknown algorithm: %s" % algorithm)
 
-def run_random_walk(optimizer, parameters):
+def run_random_walk(optimizer, configuration):
     arguments = {}
 
-    if "parallel_samples" in parameters:
-        arguments["parallel_samples"] = parmeters["parallel_samples"]
+    if "parallel_samples" in configuration:
+        arguments["parallel_samples"] = configuration["parallel_samples"]
 
     from octras.algorithms.random_walk import random_walk_algorithm
     random_walk_algorithm(optimizer, **arguments)
