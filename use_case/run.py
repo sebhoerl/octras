@@ -237,13 +237,8 @@ def run_experiment(optimizer, parameters, configuration):
         raise RuntimeError("Unknown algorithm: %s" % algorithm)
 
 def run_random_walk(optimizer, parameters):
-    bounds = [
-        parameter["bounds"] if "bounds" in parameter else (None, None)
-        for parameter in parameters
-    ]
-
     from octras.algorithms.random_walk import random_walk_algorithm
-    random_walk_algorithm(optimizer, bounds)
+    random_walk_algorithm(optimizer)
 
 def run_fdsa_spsa(algorithm, optimizer, configuration):
     arguments = {}
@@ -300,16 +295,15 @@ def run_opdyts(optimizer, configuration):
     if not "number_of_transitions" in configuration:
         raise RuntimeError("Number of transitions must be set for opdyts")
 
-    if not "adaptation_weight" in configuration:
-        raise RuntimeError("Perturbation length must be set for opdyts")
+    if "adaptation_weight" in configuration:
+        arguments["adaptation_weight"] = configuration["adaptation_weight"]
 
     if not "perturbation_length" in configuration:
-        raise RuntimeError("Adaptation weight must be set for opdyts")
+        raise RuntimeError("Perturbation length must be set for opdyts")
 
     arguments["candidate_set_size"] = configuration["candidate_set_size"]
     arguments["transition_iterations"] = configuration["transition_iterations"]
     arguments["number_of_transitions"] = configuration["number_of_transitions"]
-    arguments["adaptation_weight"] = configuration["adaptation_weight"]
     arguments["perturbation_length"] = configuration["perturbation_length"]
 
     from octras.algorithms.opdyts import opdyts_algorithm
