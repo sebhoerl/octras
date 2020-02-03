@@ -1,6 +1,9 @@
 import problems, matsim, octras.simulation, octras.optimization
 import os, subprocess
 import numpy as np
+import copy, os
+
+from analysis.utils import extract_initial_data
 
 
 def verify_configuration(configuration):
@@ -325,9 +328,6 @@ def run_bo(optimizer, configuration):
     if "batch_size" in configuration:
         arguments["batch_size"] = configuration["batch_size"]
 
-    if "initial_samples" in configuration:
-        arguments["initial_samples"] = configuration["initial_samples"]
-
     if arguments["method"] == "mfmes":
         if not "fidelities" in configuration or not configuration["fidelities"] in ("sample_size", "iterations"):
             raise RuntimeError("Fidelity must be set for MF-MES. Select from (sample_size, iterations).")
@@ -347,6 +347,16 @@ def run_bo(optimizer, configuration):
             ]
 
         arguments["fidelities"] = fidelities
+
+    if "initial_samples" in configuration:
+        if isinstance(configuration["initial_samples"], str):
+            x, y = extract_initial_data(configuration["initial_samples"],
+                                        low_fidelity=fidelities[0]["name"],
+                                        high_fidelity=fidelities[1]["name"],
+                                        nmb_samples=64)
+            arguments["initial_samples"] = (x, y)
+        else:
+            arguments["initial_samples"] = configuration["initial_samples"]
 
     arguments["bo_iterations"] = configuration["bo_iterations"]
 
@@ -394,7 +404,6 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise RuntimeError("Expecting path to config file as first argument")
 
-    np.random.seed(42)
     with open(sys.argv[1]) as f:
         configuration = yaml.load(f, Loader = yaml.SafeLoader)
 
@@ -404,10 +413,18 @@ if __name__ == "__main__":
     problem, parameters = setup_problem(configuration)
     simulator = setup_simulator(configuration)
     scheduler = setup_scheduler(simulator, configuration)
-    optimizer = setup_optimizer(scheduler, problem, configuration)
 
-    run_experiment(optimizer, parameters, configuration)
+    if 'random_seed' in configuration:
+        np.random.seed(configuration['random_seed'])
 
+    if 'nmb_launches' in configuration['calibration']:
+        for i in range (configuration['calibration']['nmb_launches']):
+            configuration_i = copy.deepcopy(configuration)
+            path, ext = os.path.splitext(configuration_i['calibration']['output_path'])
+            configuration_i['calibration']['output_path'] = path + '_{}'.format(i) + ext
+            optimizer = setup_optimizer(scheduler, problem, configuration_i)
+            run_experiment(optimizer, parameters, configuration_i)
+    else:
+        optimizer = setup_optimizer(scheduler, problem, configuration)
+        run_experiment(optimizer, parameters, configuration)
 
-
-    #problem = setup_problem(configuration)

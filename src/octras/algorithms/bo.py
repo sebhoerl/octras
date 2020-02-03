@@ -24,7 +24,7 @@ import GPy
 import numpy as np
 
 
-def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
+def bo_algorithm(evaluator, batch_size=4, num_restarts=2, update_interval=1, initial_samples=4, method="mes",
                 fidelities=None, use_standard_kernels=False, bo_iterations=50):
 
     bo = BO(evaluator, batch_size, num_restarts, update_interval, initial_samples, method,
@@ -33,7 +33,7 @@ def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, ini
     bo.bo_run()
 
 
-def subdomain_bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
+def subdomain_bo_algorithm(evaluator, batch_size=4, num_restarts=2, update_interval=1, initial_samples=4, method="mes",
                 fidelities=None, use_standard_kernels=False, subdomain_size=3, num_subdomain_iters=1, bo_iterations=50):
 
     bo = BO(evaluator, batch_size, num_restarts, update_interval, initial_samples, method,
@@ -80,7 +80,7 @@ class FidelityEvaluator:
         self.evaluator.wait(identifiers)
         objectives = [self.evaluator.get(identifier)[0] for identifier in identifiers]
 
-        self.annotations["bo_iterations"] += 1
+        self.annotations["bo_iteration"] += 1
 
         for identifier in identifiers:
             self.evaluator.cleanup(identifier)
@@ -93,7 +93,7 @@ class FidelityEvaluator:
         # etc... This function here is called as a iteration ends callback in
         # the BO loop.
 
-        self.annotations["bo_iterations"] = state.iteration
+        self.annotations["bo_iteration"] = state.iteration
 
 class EvaluatorStoppingCondition(StoppingCondition):
     """
@@ -144,7 +144,7 @@ class BO:
         self.fidelity_evaluator = FidelityEvaluator(self.evaluator, self.fidelities)
 
         # Obtain initial sample
-        if type(initial_samples) == int:
+        if isinstance(initial_samples, int):
             if self.method == "mfmes":
                 design = LatinDesign(ParameterSpace(self.parameter_space_without_fidelity))
             else:
