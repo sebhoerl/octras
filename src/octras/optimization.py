@@ -39,6 +39,7 @@ class Optimizer:
         self.parameters = {}
         self.results = {}
         self.annotations = {}
+        self.method_details = {}
 
         self.log_path = log_path
         self.log = []
@@ -127,7 +128,8 @@ class Optimizer:
             pickle.dump({
                 "log": self.log,
                 "reference": self.problem.get_reference_state(),
-                "problem": self.problem.get_info()
+                "problem": self.problem.get_info(),
+                "method_details": self.method_details
             }, f)
 
     def cleanup(self, identifier):

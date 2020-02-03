@@ -337,25 +337,30 @@ def run_bo(optimizer, configuration):
             fidelities = [
                 { "name": "1pm", "cost": 0.001, "parameters": { "sample_size": "1pm" } },
                 { "name": "1pct", "cost": 0.01, "parameters": { "sample_size": "1pct" } },
-                { "name": "10pct", "cost": 0.1, "parameters": { "sample_size": "10pct" } }
+                # { "name": "10pct", "cost": 0.1, "parameters": { "sample_size": "10pct" } }
             ]
 
         if configuration["fidelities"] == "iterations":
             fidelities = [
-                { "name": "10it", "cost": 1, "parameters": { "iterations": 10 } },
+                { "name": "10it", "cost": 10, "parameters": { "iterations": 10} },
                 # { "name": "40it", "cost": 40, "parameters": { "iterations": 40 } },
-                { "name": "40it", "cost": 4, "parameters": { "iterations": 40} },
+                { "name": "40it", "cost": 40, "parameters": { "iterations": 40} },
             ]
 
         arguments["fidelities"] = fidelities
+
+    arguments["bo_iterations"] = configuration["bo_iterations"]
 
     from octras.algorithms.bo import bo_algorithm, subdomain_bo_algorithm
     if "subdomain_bo" in configuration and configuration["subdomain_bo"]:
         arguments["subdomain_size"] = 3
         arguments["num_subdomain_iters"] = 10
+        optimizer.method_details.update(arguments)
         subdomain_bo_algorithm(optimizer, **arguments)
     else:
+        optimizer.method_details.update(arguments)
         bo_algorithm(optimizer, **arguments)
+
 
 def parse_arguments(args, configuration):
     if len(args) % 2 != 0:
@@ -390,6 +395,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise RuntimeError("Expecting path to config file as first argument")
 
+    np.random.seed(42)
     with open(sys.argv[1]) as f:
         configuration = yaml.load(f, Loader = yaml.SafeLoader)
 

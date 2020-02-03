@@ -9,7 +9,7 @@ from emukit.bayesian_optimization.acquisitions import NegativeLowerConfidenceBou
 from emukit.core.optimization import GradientAcquisitionOptimizer
 from emukit.bayesian_optimization.loops.bayesian_optimization_loop import BayesianOptimizationLoop
 from emukit.core.loop.candidate_point_calculators import GreedyBatchPointCalculator
-from emukit.experimental_design.model_free.random_design import RandomDesign
+from emukit.experimental_design.model_free.latin_design import LatinDesign
 
 from emukit.core.loop.stopping_conditions import StoppingCondition
 from emukit.bayesian_optimization.acquisitions.minvalue_entropy_search import MinValueEntropySearch, Cost, MultiFidelityMinValueEntropySearch
@@ -17,6 +17,7 @@ from emukit.bayesian_optimization.acquisitions.minvalue_entropy_search import Mi
 from emukit.model_wrappers import GPyMultiOutputWrapper
 from emukit.core.optimization.multi_source_acquisition_optimizer import MultiSourceAcquisitionOptimizer
 from emukit.bayesian_optimization.acquisitions.entropy_search import MultiInformationSourceEntropySearch
+from emukit.core.loop import FixedIterationsStoppingCondition
 
 
 import GPy
@@ -24,19 +25,21 @@ import numpy as np
 
 
 def bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
-                fidelities=None, use_standard_kernels=False):
+                fidelities=None, use_standard_kernels=False, bo_iterations=50):
 
     bo = BO(evaluator, batch_size, num_restarts, update_interval, initial_samples, method,
-                fidelities=fidelities, use_standard_kernels=use_standard_kernels)
+                fidelities=fidelities, use_standard_kernels=use_standard_kernels, bo_iterations=bo_iterations)
+
     bo.bo_run()
 
 
 def subdomain_bo_algorithm(evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
-                fidelities=None, use_standard_kernels=False, subdomain_size=2, num_subdomain_iters=1):
+                fidelities=None, use_standard_kernels=False, subdomain_size=3, num_subdomain_iters=1, bo_iterations=50):
 
     bo = BO(evaluator, batch_size, num_restarts, update_interval, initial_samples, method,
-                fidelities=fidelities, use_standard_kernels=use_standard_kernels)
+                fidelities=fidelities, use_standard_kernels=use_standard_kernels, bo_iterations=bo_iterations)
     bo.subdomain_bo_run(subdomain_size, num_subdomain_iters)
+
 
 class FidelityEvaluator:
     """
@@ -77,6 +80,8 @@ class FidelityEvaluator:
         self.evaluator.wait(identifiers)
         objectives = [self.evaluator.get(identifier)[0] for identifier in identifiers]
 
+        self.annotations["bo_iterations"] += 1
+
         for identifier in identifiers:
             self.evaluator.cleanup(identifier)
 
@@ -89,7 +94,6 @@ class FidelityEvaluator:
         # the BO loop.
 
         self.annotations["bo_iterations"] = state.iteration
-
 
 class EvaluatorStoppingCondition(StoppingCondition):
     """
@@ -105,7 +109,7 @@ class EvaluatorStoppingCondition(StoppingCondition):
 
 class BO:
     def __init__(self, evaluator, batch_size=4, num_restarts=1, update_interval=1, initial_samples=4, method="mes",
-                 GPmodel=None, fidelities=None, use_standard_kernels=True):
+                 gp_model=None, fidelities=None, use_standard_kernels=True, bo_iterations=50):
 
         self.evaluator = evaluator
         self.batch_size = batch_size
@@ -114,7 +118,7 @@ class BO:
         self.method = method
         self.fidelities = fidelities
         self.use_standard_kernels = use_standard_kernels
-        self.gp_model = GPmodel
+        self.gp_model = gp_model
 
         if not self.method in ("mes", "gpbucb", "mfmes"):
             raise RuntimeError("Wrong method: %s" % self.method)
@@ -141,8 +145,14 @@ class BO:
 
         # Obtain initial sample
         if type(initial_samples) == int:
-            design = RandomDesign(self.parameter_space)
-            self.initial_x = design.get_samples(initial_samples)
+            if self.method == "mfmes":
+                design = LatinDesign(ParameterSpace(self.parameter_space_without_fidelity))
+            else:
+                design = LatinDesign(self.parameter_space)
+            initial_x = design.get_samples(initial_samples)
+            initial_x_low = np.c_[initial_x, np.zeros(len(initial_x))]
+            initial_x_high = np.c_[initial_x, np.ones(len(initial_x))]
+            self.initial_x = np.vstack((initial_x_low, initial_x_high))
             self.initial_y = self.fidelity_evaluator(self.initial_x)
         else:
             self.initial_x, self.initial_y = initial_samples
@@ -156,7 +166,7 @@ class BO:
                 self.gp_model = self.define_gpmodel_mf(self.num_parameters, self.initial_x, self.initial_y,
                                                        fidelities, num_restarts=num_restarts)
 
-        self.stopping_condition = EvaluatorStoppingCondition(evaluator)
+        self.stopping_condition = FixedIterationsStoppingCondition(i_max=bo_iterations)
 
     @staticmethod
     def define_gpmodel_mf(num_parameters, initial_x, initial_y, fidelities, num_restarts=1):
