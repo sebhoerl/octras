@@ -60,7 +60,8 @@ def test_bo_multi_fidelity():
     # to see the progress of the optimization. But as I wrote in the algorithm
     # file, you can also write custom information into the p file for each sample
     # and then analyze/visualize it.
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100, log_path = "/home/anmakaro/matsim/oc-matsim/tests/mfmes.p")
+    #optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100, log_path = "/home/anmakaro/matsim/oc-matsim/tests/mfmes.p")
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100)
 
     # @Sebastian: maybe we need a special class for fidelities to standartise it?
     # fidelity is defines by name, cost, and a set of parameters that are specific to this fidelity level
@@ -116,7 +117,8 @@ def test_subdomain_bo_multi_fidelity():
     problem = RoadRailProblem()
 
     scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100, log_path = "/home/anmakaro/matsim/oc-matsim/tests/mfmes.p")
+    #optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100, log_path = "/home/anmakaro/matsim/oc-matsim/tests/mfmes.p")
+    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100)
 
     fidelities = [
         { "parameters": { "iterations": 50 }, "name": "it50", "cost": 50 },
