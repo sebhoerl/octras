@@ -382,7 +382,14 @@ def parse_arguments(args, configuration):
             raise RuntimeError("Wrong format: %s" % name)
 
         name = name[2:]
-        value = int(value)
+
+        try:
+            value = int(value)
+        except TypeError:
+            try:
+                value = float(value)
+            except TypeError:
+                value = str(value)
 
         partial_configuration = configuration
         parts = name.split(".")
@@ -427,4 +434,3 @@ if __name__ == "__main__":
     else:
         optimizer = setup_optimizer(scheduler, problem, configuration)
         run_experiment(optimizer, parameters, configuration)
-
