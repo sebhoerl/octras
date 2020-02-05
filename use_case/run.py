@@ -385,10 +385,10 @@ def parse_arguments(args, configuration):
 
         try:
             value = int(value)
-        except TypeError:
+        except ValueError:
             try:
                 value = float(value)
-            except TypeError:
+            except ValueError:
                 value = str(value)
 
         partial_configuration = configuration
