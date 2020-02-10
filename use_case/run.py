@@ -146,7 +146,7 @@ def setup_problem(configuration):
         state_calculator = problems.TotalModeShare(modes)
     elif configuration["problem"] == "car_travel_time":
         bounds = np.array((322, 602, 1029, 1961))
-        state_names = ["%dmin" % bound for bound in bounds]
+        state_names = ["%dmin" % bound for bound in bounds] + ["inf"]
         state_calculator = problems.TravelTimeDistribution(bounds, "car")
     elif configuration["problem"] == "mode_share_by_distance":
         mode_bounds = [ # TODO
