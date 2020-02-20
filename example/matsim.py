@@ -1,4 +1,4 @@
-from simulator import Simulator
+from octras import Simulator
 
 import os, shutil
 import subprocess as sp
@@ -156,7 +156,7 @@ class MATSimSimulator(Simulator):
                     return df["Iteration"].max()
             except:
                 pass
-                
+
         return -1
 
     def ready(self, identifier):
