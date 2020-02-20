@@ -1,21 +1,27 @@
+from ..cases import CongestionSimulator, CongestionProblem
+
+from octras.algorithms import Opdyts
+from octras import Loop, Evaluator
+
+import pytest
 import numpy as np
 
-from ..utils import RoadRailSimulator, RoadRailProblem
-from octras.simulation import Scheduler
-from octras.optimization import Optimizer
-
-from octras.algorithms.opdyts import opdyts_algorithm
-from octras.algorithms.random_walk import random_walk_algorithm
-from octras.algorithms.scipy import scipy_algorithm
-
 def test_opdyts():
-    np.random.seed(0)
+    loop = Loop()
 
-    simulator = RoadRailSimulator()
-    problem = RoadRailProblem()
+    evaluator = Evaluator(
+        simulator = CongestionSimulator(),
+        problem = CongestionProblem(0.3, iterations = 10)
+    )
 
-    scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_cost = 10000)
+    algorithm = Opdyts(evaluator,
+        candidate_set_size = 16,
+        number_of_transitions = 20,
+        perturbation_length = 50,
+        seed = 0
+    )
 
-    opdyts_algorithm(optimizer, perturbation_length = 2.0, transition_iterations = 10, number_of_transitions = 20, candidate_set_size = 10)
-    assert optimizer.best_objective < 1e-3
+    assert np.round(Loop(threshold = 1e-3, maximum_cost = 10000).run(
+        evaluator = evaluator,
+        algorithm = algorithm
+    )) == 231

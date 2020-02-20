@@ -1,16 +1,27 @@
-import numpy as np
 import scipy.optimize
 
 import logging
 logger = logging.getLogger(__name__)
 
-def scipy_worker(x, calibrator):
-    identifier = calibrator.schedule(x)
-    objective, state = calibrator.get(identifier)
-    calibrator.cleanup(identifier)
-    return objective
+class ScipyAlgorithm:
+    def __init__(self, evaluator, **arguments):
+        self.evaluator = evaluator
+        self.arguments = arguments
 
-def scipy_algorithm(calibrator, **arguments):
-    logger.info("Starting optimization with scipy.optimize.minimize")
-    x0 = [p["initial"] for p in calibrator.problem.parameters]
-    return scipy.optimize.minimize(fun = scipy_worker, x0 = x0, args = (calibrator,), **arguments)
+        if not hasattr(self.evaluator.problem, "initial"):
+            raise RuntimeError("Initial parameters must be provided by problem for SciPy")
+
+    def _worker(self, x):
+        identifier = self.evaluator.submit(x)
+        objective, state = self.evaluator.get(identifier)
+        self.evaluator.clean(identifier)
+        return objective
+
+    def advance(self):
+        logger.info("Starting optimization with scipy.optimize.minimize")
+
+        return scipy.optimize.minimize(
+            fun = self._worker,
+            x0 = self.evaluator.problem.initial,
+            **self.arguments
+        )

@@ -5,80 +5,92 @@ import logging
 logger = logging.getLogger(__name__)
 
 # https://en.wikipedia.org/wiki/CMA-ES
-def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 0.3):
-    # Initialize state
-    initial_parameters = [p["initial"] for p in calibrator.problem.parameters]
-    N = len(initial_parameters)
 
-    mean = np.copy(initial_parameters).reshape((N,1))
-    sigma = initial_step_size
+class CMAES:
+    def __init__(self, evaluator, candidate_set_size = None, initial_step_size = 0.3, seed = None):
+        self.evaluator = evaluator
+        self.problem = self.evaluator.problem
 
-    # Selection parameters
-    L_default = 4 + int(np.floor(3 * np.log(N)))
-    L = L_default if candidate_set_size is None else candidate_set_size
+        if not hasattr(self.problem, "initial"):
+            raise RuntimeError("CMA-ES expects the problem to provide initial parameters.")
 
-    if not candidate_set_size is None and candidate_set_size < L_default:
-        logger.warning("Using requested candidate set size %d (recommended is at least %d!)" % (candidate_set_size, L_default))
+        # Selection parameters
+        L_default = 4 + int(np.floor(3 * np.log(self.problem.number_of_parameters)))
+        self.L = L_default if candidate_set_size is None else candidate_set_size
 
-    mu = L / 2.0
-    weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
-    mu = int(np.floor(mu))
-    weights = weights[:mu] / np.sum(weights[:mu])
-    mueff = np.sum(weights)**2 / np.sum(weights ** 2)
+        if not candidate_set_size is None and candidate_set_size < L_default:
+            logger.warning("Using requested candidate set size %d (recommended is at least %d!)" % (candidate_set_size, L_default))
 
-    # Adaptation parameters
-    cc = (4 + mueff / N) / (N + 4 + 2.0 * mueff / N)
-    cs = (mueff + 2.0) / (N + mueff + 5.0)
-    c1 = 2.0 / ((N + 1.3)**2 + mueff)
-    cmu = min(1.0 - c1, 2.0 * (mueff - 2.0 + 1.0 / mueff) / ((N + 2.0)**2 + mueff))
-    damps = 1.0 + 2.0 * max(0, np.sqrt((mueff - 1.0) / (N + 1.0)) - 1.0) + cs
+        # Initialize static parameters
+        self.N = self.problem.number_of_parameters
 
-    # Initialize dynamic parameters
-    pc = np.zeros((N,1))
-    ps = np.zeros((N,1))
-    B = np.eye(N)
-    D = np.ones((N,))
-    C = np.dot(B, np.dot(np.diag(D**2), B.T))
-    invsqrtC = np.dot(B, np.dot(np.diag(D**-1), B.T))
-    eigeneval = 0
-    counteval = 0
-    chiN = N**0.5 * (1.0 - 1.0 / (4.0 * N) + 1.0 / (21.0 * N**2))
+        self.mu = self.L / 2.0
+        self.weights = np.log(self.mu + 0.5) - np.log(np.arange(1, self.mu + 1))
+        self.mu = int(np.floor(self.mu))
+        self.weights = self.weights[:self.mu] / np.sum(self.weights[:self.mu])
+        self.mueff = np.sum(self.weights)**2 / np.sum(self.weights ** 2)
 
-    # Start algorithm
-    cma_es_iteration = 0
+        # Adaptation parameters
+        self.cc = (4 + self.mueff / self.N) / (self.N + 4 + 2.0 * self.mueff / self.N)
+        self.cs = (self.mueff + 2.0) / (self.N + self.mueff + 5.0)
+        self.c1 = 2.0 / ((self.N + 1.3)**2 + self.mueff)
+        self.cmu = min(1.0 - self.c1, 2.0 * (self.mueff - 2.0 + 1.0 / self.mueff) / ((self.N + 2.0)**2 + self.mueff))
+        self.damps = 1.0 + 2.0 * max(0, np.sqrt((self.mueff - 1.0) / (self.N + 1.0)) - 1.0) + self.cs
 
-    while not calibrator.finished:
-        cma_es_iteration += 1
-        logger.info("Starting CMA-ES iteration %d." % cma_es_iteration)
+        # Initialize dynamic parameters
+        self.pc = np.zeros((self.N,1))
+        self.ps = np.zeros((self.N,1))
+        self.B = np.eye(self.N)
+        self.D = np.ones((self.N,))
+        self.C = np.dot(self.B, np.dot(np.diag(self.D**2), self.B.T))
+        self.invsqrtC = np.dot(self.B, np.dot(np.diag(self.D**-1), self.B.T))
+        self.eigeneval = 0
+        self.counteval = 0
+        self.chiN = self.N**0.5 * (1.0 - 1.0 / (4.0 * self.N) + 1.0 / (21.0 * self.N**2))
+
+        # Initialize algorithm parameters
+        self.iteration = 0
+        self.mean = None
+        self.sigma = initial_step_size
+
+        self.random = np.random.RandomState(seed)
+
+    def advance(self):
+        if self.iteration == 0:
+            self.mean = np.copy(self.evaluator.problem.initial).reshape((self.N, 1))
+
+        self.iteration += 1
+        logger.info("Starting CMA-ES iteration %d." % self.iteration)
 
         annotations = {
-            "mean": mean,
-            "covariance": C, "pc": pc, "ps": ps,
-            "sigma": sigma
+            "mean": self.mean,
+            "covariance": self.C, "pc": self.pc, "ps": self.ps,
+            "sigma": self.sigma
         }
 
-        # Generate new samples
-        counteval += L
+        self.counteval += self.L
 
-        candidate_parameters = sigma * np.dot((np.random.normal(size = (N, L)) * D[:, np.newaxis]).T, B) + mean.T
+        candidate_parameters = self.sigma * np.dot(
+            (self.random.normal(size = (self.N, self.L)) * self.D[:, np.newaxis]).T, self.B
+        ) + self.mean.T
 
         candidate_identifiers = [
-            calibrator.schedule(parameters, annotations = annotations)
+            self.evaluator.submit(parameters, annotations = annotations)
             for parameters in candidate_parameters
         ]
 
         # Wait for samples
-        calibrator.wait()
+        self.evaluator.wait()
 
         # Obtain fitness
         candidate_objectives = np.array([
-            calibrator.get(identifier)[0] # We minimize!
+            self.evaluator.get(identifier)[0] # We minimize!
             for identifier in candidate_identifiers
         ])
 
         # Cleanup
         for identifier in candidate_identifiers:
-            calibrator.cleanup(identifier)
+            self.evaluator.clean(identifier)
 
         sorter = np.argsort(candidate_objectives)
 
@@ -86,41 +98,40 @@ def cma_es_algorithm(calibrator, candidate_set_size = None, initial_step_size = 
         candidate_parameters = candidate_parameters[sorter, :]
 
         # Update mean
-        previous_mean = mean
-        mean = np.sum(candidate_parameters[:mu] * weights[:, np.newaxis], axis = 0).reshape((N, 1))
+        previous_mean = self.mean
+        self.mean = np.sum(candidate_parameters[:self.mu] * self.weights[:, np.newaxis], axis = 0).reshape((self.N, 1))
 
         # Update evolution paths
+        psa = (1.0 - self.cs ) * self.ps
+        psb = np.sqrt(self.cs * (2.0 - self.cs) * self.mueff) * np.dot(self.invsqrtC, self.mean - previous_mean) / self.sigma
+        self.ps = psa + psb
 
-        psa = (1.0 - cs ) * ps
-        psb = np.sqrt(cs * (2.0 - cs) * mueff) * np.dot(invsqrtC, mean - previous_mean) / sigma
-        ps = psa + psb
-
-        hsig = la.norm(ps) / np.sqrt(1.0 - (1.0 - cs)**(2.0 * counteval / L)) / chiN < 1.4 + 2.0 / (N + 1.0)
-        pca = (1.0 - cc) * pc
-        pcb = hsig * np.sqrt(cc * (2.0 - cc) * mueff) * (mean - previous_mean) / sigma
-        pc = pca + pcb
+        hsig = la.norm(self.ps) / np.sqrt(1.0 - (1.0 - self.cs)**(2.0 * self.counteval / self.L)) / self.chiN < 1.4 + 2.0 / (self.N + 1.0)
+        pca = (1.0 - self.cc) * self.pc
+        pcb = hsig * np.sqrt(self.cc * (2.0 - self.cc) * self.mueff) * (self.mean - previous_mean) / self.sigma
+        self.pc = pca + pcb
 
         # Adapt covariance matrix
-        artmp = (1.0 / sigma) * (candidate_parameters[:mu].T - previous_mean)
+        artmp = (1.0 / self.sigma) * (candidate_parameters[:self.mu].T - previous_mean)
 
-
-        Ca = (1.0 - c1 - cmu) * C
-        Cb = c1 * (np.dot(pc, pc.T) + (not hsig) * cc * (2.0 - cc) * C)
-        Cc = cmu * np.dot(artmp, np.dot(np.diag(weights), artmp.T))
+        Ca = (1.0 - self.c1 - self.cmu) * self.C
+        Cb = self.c1 * (np.dot(self.pc, self.pc.T) + (not hsig) * self.cc * (2.0 - self.cc) * self.C)
+        Cc = self.cmu * np.dot(artmp, np.dot(np.diag(self.weights), artmp.T))
         C = Ca + Cb + Cc
 
         # Adapt step size
-        sigma = sigma * np.exp((cs / damps) * (la.norm(ps) / chiN - 1.0))
+        self.sigma = self.sigma * np.exp((self.cs / self.damps) * (la.norm(self.ps) / self.chiN - 1.0))
 
-        if counteval - eigeneval > L / (c1 + cmu) / N / 10.0:
-            eigeneval = counteval
-            C = np.triu(C) + np.triu(C, 1).T
-            d, B = la.eig(C)
+        if self.counteval - self.eigeneval > self.L / (self.c1 + self.cmu) / self.N / 10.0:
+            self.eigeneval = self.counteval
 
-            D = np.sqrt(d)
+            self.C = np.triu(self.C) + np.triu(self.C, 1).T
+            d, self.B = la.eig(self.C)
+
+            self.D = np.sqrt(d)
             Dm = np.diag(1.0 / np.sqrt(d))
 
-            invsqrtC = np.dot(B.T, np.dot(Dm, B))
+            self.invsqrtC = np.dot(self.B.T, np.dot(Dm, self.B))
 
-        if np.max(D) > 1e7 * np.min(D):
+        if np.max(self.D) > 1e7 * np.min(self.D):
             logger.warning("Condition exceeds 1e14")

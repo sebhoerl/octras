@@ -1,47 +1,24 @@
-import uuid, time
+from ..cases import CongestionSimulator, CongestionProblem
+
+from octras.algorithms import CMAES
+from octras import Loop, Evaluator
+
+import pytest
 import numpy as np
-import scipy.optimize
-
-from ..utils import RoadRailSimulator, RoadRailProblem
-from ..utils import QuadraticSumSimulator, RealDimensionalProblem
-from ..utils import RosenbrockSimulator
-from octras.simulation import Scheduler
-from octras.optimization import Optimizer
-
-from octras.algorithms.cma_es import cma_es_algorithm
 
 def test_cma_es():
-    np.random.seed(0)
+    for seed in (1000, 2000, 3000, 4000):
+        evaluator = Evaluator(
+            simulator = CongestionSimulator(),
+            problem = CongestionProblem(0.3, iterations = 200)
+        )
 
-    simulator = QuadraticSumSimulator([2.0, 4.0])
-    problem = RealDimensionalProblem(2)
+        algorithm = CMAES(evaluator,
+            initial_step_size = 50,
+            seed = seed
+        )
 
-    scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 200)
-
-    cma_es_algorithm(optimizer, candidate_set_size = 4)
-    assert optimizer.best_objective < 1e-3
-
-def test_cma_es_with_rosenbrock():
-    np.random.seed(0)
-
-    simulator = RosenbrockSimulator()
-    problem = RealDimensionalProblem(3)
-
-    scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 10000)
-
-    cma_es_algorithm(optimizer)
-    assert optimizer.best_objective < 1e-3
-
-def test_cma_es_with_road():
-    np.random.seed(0)
-
-    simulator = RoadRailSimulator()
-    problem = RoadRailProblem({ "iterations": 200 })
-
-    scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 200)
-
-    cma_es_algorithm(optimizer, candidate_set_size = 4)
-    assert optimizer.best_objective < 1e-3
+        assert abs(np.round(Loop(threshold = 1e-4).run(
+            evaluator = evaluator,
+            algorithm = algorithm
+        )) - 230) < 10

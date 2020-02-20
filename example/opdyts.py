@@ -77,18 +77,17 @@ class AdaptationProblem:
         return result.x
 
 class Opdyts:
-    def __init__(self, evaluator, candidate_set_size, number_of_transitions, perturbation_length = 1.0, adaptation_weight = 0.3, seed = None):
+    def __init__(self, problem, evaluator, candidate_set_size, number_of_transitions, perturbation_length = 1.0):
+        self.problem = problem
         self.evaluator = evaluator
-        self.problem = self.evaluator.problem
 
-        self.iteration = 0
+        self.iterations = 0
         self.v, self.w = 0.0, 0.0
 
-        self.adaptation_weight = adaptation_weight
         self.adaptation_transient_performance = []
         self.adaptation_equilibrium_gap = []
         self.adaptation_uniformity_gap = []
-        self.adaptation_selection_performance = []
+        self.adaptation.selection_performance = []
 
         self.candidate_set_size = candidate_set_size
         self.perturbation_length = perturbation_length
@@ -102,27 +101,20 @@ class Opdyts:
         if not hasattr(self.problem, "initial"):
             raise RuntimeError("Opdyts expects the problem to provide initial parameters.")
 
-        if not hasattr(self.problem, "number_of_states"):
-            raise RuntimeError("Opdyts expects the problem to provide number of states.")
-
         self.initial = self.problem.initial
 
         self.initial_identifier = None
         self.initial_objective = None
         self.initial_state = None
-        self.initial_parameters = None
-
-        self.random = np.random.RandomState(seed)
 
     def advance(self):
         if self.iteration == 0:
             logger.info("Initializing Opdyts")
 
-            self.initial_parameters = self.problem.initial
-            self.initial_identifier = self.evaluator.submit(self.initial_parameters,
+            self.initial_identifier = self.evaluator.submit(self.problem.initial,
                 { "iterations": 1 }, { "type": "initial", "transient": True }
             )
-            self.initial_objective, self.initial_state = self.evaluator.get(self.initial_identifier)
+            self.initial_objective, self.initial_state = self.evaluator.get(initial_identifier)
 
         self.iteration += 1
         logger.info("Starting Opdyts iteration %d" % self.iteration)
@@ -131,7 +123,7 @@ class Opdyts:
         candidate_parameters = np.zeros((self.candidate_set_size, self.problem.number_of_parameters))
 
         for c in range(0, self.candidate_set_size, 2):
-            direction = self.random.random_sample(size = (self.problem.number_of_parameters,)) * 2.0 - 1.0
+            direction = np.random.random(size = (self.problem.number_of_parameters,)) * 2.0 - 1.0
             candidate_parameters[c] = self.initial_parameters + direction * self.perturbation_length
             candidate_parameters[c + 1] = self.initial_parameters + direction * self.perturbation_length
 
@@ -151,15 +143,15 @@ class Opdyts:
             candidate_annotations = copy.copy(annotations)
             candidate_annotations.update({ "candidate": c })
 
-            candidate_identifiers.append(self.evaluator.submit(candidate_parameters[c], {
-                #"iterations": transition_iterations,
-                "restart": self.initial_identifier
+            candidate_identifiers.append(calibrator.schedule(candidate_parameters[c], {
+                "iterations": transition_iterations,
+                "restart": initial_identifier
             }, candidate_annotations))
 
-        self.evaluator.wait()
+        evaluator.wait()
 
         for c in range(self.candidate_set_size):
-            candidate_objectives[c], candidate_states[c] = self.evaluator.get(candidate_identifiers[c])
+            candidate_objectives[c], candidate_states[c] = calibrator.get(candidate_identifiers[c])
             candidate_deltas[c] = candidate_states[c] - self.initial_state
 
         # Advance candidates
@@ -185,11 +177,11 @@ class Opdyts:
                 transient_performance, equilibrium_gap, uniformity_gap)
 
             cumulative_alpha = np.cumsum(alpha)
-            c = np.sum(self.random.random_sample() > cumulative_alpha) # TODO: Not deterministic!
+            c = np.sum(np.random.random() > cumulative_alpha) # TODO: Not deterministic!
 
             logger.info("Transitioning candidate %d", c)
             candidate_transitions[c] += 1
-            transient = candidate_transitions[c] < self.number_of_transitions
+            transient = candidate_transitions[c] < number_of_transitions
 
             annotations.update({
                 "type": "transition",
@@ -199,13 +191,13 @@ class Opdyts:
             })
 
             # Advance selected candidate
-            identifier = self.evaluator.submit(candidate_parameters[c], {
-                #"iterations": transition_iterations,
+            identifier = evaluator.submit(candidate_parameters[c], {
+                "iterations": transition_iterations,
                 "restart": candidate_identifiers[c]
             }, annotations)
 
-            new_objective, new_state = self.evaluator.get(identifier)
-            self.evaluator.clean(candidate_identifiers[c])
+            new_objective, new_state = evaluator.get(identifier)
+            evaluator.cleanup(candidate_identifiers[c])
 
             candidate_deltas[c] = new_state - candidate_states[c]
             candidate_states[c], candidate_objectives[c] = new_state, new_objective
@@ -216,9 +208,9 @@ class Opdyts:
 
         for c in range(self.candidate_set_size):
             if c != index:
-                self.evaluator.clean(candidate_identifiers[c])
+                evalulator.cleanup(candidate_identifiers[c])
 
-        self.evaluator.clean(self.initial_identifier)
+        calibrator.cleanup(self.initial_identifier)
         self.initial_identifier = candidate_identifiers[index]
         self.initial_state = candidate_states[index]
         self.initial_parameters = candidate_parameters[index]
@@ -231,4 +223,4 @@ class Opdyts:
         adaptation_problem = AdaptationProblem(self.adaptation_weight, self.adaptation_selection_performance, self.adaptation_transient_performance, self.adaptation_equilibrium_gap, self.adaptation_uniformity_gap)
         self.v, self.w = adaptation_problem.solve()
 
-        logger.info("Solved Adaptation Problem. v = %f, w = %f", self.v, self.w)
+        logger.info("Solved Adaptation Problem. v = %f, w = %f", v, w)

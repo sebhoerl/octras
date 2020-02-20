@@ -1,0 +1,8 @@
+/target/
+toy_example/.settings
+toy_example/.project
+toy_example/.classpath
+toy_example/dependency-reduced-pom.xml
+.classpath
+.project
+.settings

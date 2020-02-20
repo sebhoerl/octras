@@ -1,24 +1,21 @@
-import uuid, time
-import numpy as np
-import scipy.optimize
+from ..cases import QuadraticSimulator, QuadraticProblem
+from ..cases import RosenbrockSimulator, RosenbrockProblem
 
-from ..utils import QuadraticSumSimulator, RealDimensionalProblem
-from octras.simulation import Scheduler
-from octras.optimization import Optimizer
+from octras.algorithms import RandomWalk
+from octras import Loop, Evaluator
 
-from octras.algorithms.random_walk import random_walk_algorithm
-from octras.algorithms.scipy import scipy_algorithm
-from octras.algorithms.spsa import spsa_algorithm
-from octras.algorithms.fdsa import fdsa_algorithm
+import pytest
 
 def test_random_walk():
-    np.random.seed(0)
+    evaluator = Evaluator(
+        simulator = QuadraticSimulator(),
+        problem = QuadraticProblem([2.0, 1.0])
+    )
 
-    simulator = QuadraticSumSimulator([2.0, 4.0])
-    problem = RealDimensionalProblem(2)
+    for seed in (1000, 2000, 3000, 4000):
+        algorithm = RandomWalk(evaluator, seed = seed)
 
-    scheduler = Scheduler(simulator, ping_time = 0.0)
-    optimizer = Optimizer(scheduler, problem, maximum_evaluations = 100)
-
-    random_walk_algorithm(optimizer)
-    assert optimizer.best_objective < 1.0
+        assert Loop(threshold = 1e-2).run(
+            evaluator = evaluator,
+            algorithm = algorithm
+        ) == pytest.approx((2.0, 1.0), 1e-1)

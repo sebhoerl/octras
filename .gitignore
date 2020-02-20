@@ -2,3 +2,6 @@ __pycache__
 .pytest_cache
 *.egg
 gis
+.env
+src/octras.egg-info
+env

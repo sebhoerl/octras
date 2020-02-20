@@ -1,22 +1,47 @@
 import numpy as np
+import deep_merge
 
 import logging
 logger = logging.getLogger(__name__)
 
 # https://www.jhuapl.edu/spsa/PDF-SPSA/Spall_Implementation_of_the_Simultaneous.PDF
-def spsa_algorithm(calibrator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = False):
-    iteration = 0
-    parameters = [p["initial"] for p in calibrator.problem.parameters]
 
-    while not calibrator.finished:
-        logger.info("Starting SPSA iteration %d." % iteration)
+class SPSA:
+    def __init__(self, evaluator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = False, seed = None):
+        self.evaluator = evaluator
+
+        self.perturbation_factor = perturbation_factor
+        self.perturbation_exponent = perturbation_exponent
+
+        self.gradient_factor = gradient_factor
+        self.gradient_exponent = gradient_exponent
+        self.gradient_offset = gradient_offset
+
+        self.compute_objective = compute_objective
+
+        self.iteration = 0
+
+        self.seed = seed
+        self.random = np.random.RandomState(self.seed)
+
+        if not hasattr(self.evaluator.problem, "initial"):
+            raise RuntimeError("Initial parameters must be provided by problem for SPSA")
+
+        self.parameters = None
+
+    def advance(self):
+        self.iteration += 1
+        logger.info("Starting SPSA iteration %d." % self.iteration)
+
+        if self.parameters is None:
+            self.parameters = self.evaluator.problem.initial
 
         # Update step lengths
-        gradient_length = gradient_factor / (iteration + 1 + gradient_offset)**gradient_exponent
-        perturbation_length = perturbation_factor / (iteration + 1)**perturbation_exponent
+        gradient_length = self.gradient_factor / (self.iteration + self.gradient_offset)**self.gradient_exponent
+        perturbation_length = self.perturbation_factor / self.iteration**self.perturbation_exponent
 
         # Sample direction from Rademacher distribution
-        direction = np.random.randint(0, 2, len(parameters)) - 0.5
+        direction = self.random.randint(0, 2, len(self.parameters)) - 0.5
 
         annotations = {
             "gradient_length": gradient_length,
@@ -25,38 +50,36 @@ def spsa_algorithm(calibrator, perturbation_factor, gradient_factor, perturbatio
         }
 
         # Schedule samples
-        positive_parameters = np.copy(parameters)
+        positive_parameters = np.copy(self.parameters)
         positive_parameters += direction * perturbation_length
-        annotations.update({ "type": "positive_gradient" })
-        positive_identifier = calibrator.schedule(positive_parameters, annotations = annotations)
+        annotations = deep_merge.merge(annotations, { "type": "positive_gradient" })
+        positive_identifier = self.evaluator.submit(positive_parameters, annotations = annotations)
 
-        negative_parameters = np.copy(parameters)
+        negative_parameters = np.copy(self.parameters)
         negative_parameters -= direction * perturbation_length
-        annotations.update({ "type": "negative_gradient" })
-        negative_identifier = calibrator.schedule(negative_parameters, annotations = annotations)
+        annotations = deep_merge.merge(annotations, { "type": "negative_gradient" })
+        negative_identifier = self.evaluator.submit(negative_parameters, annotations = annotations)
 
         # Wait for gradient run results
-        calibrator.wait()
+        self.evaluator.wait()
 
-        positive_objective, positive_state = calibrator.get(positive_identifier)
-        calibrator.cleanup(positive_identifier)
+        positive_objective, positive_state = self.evaluator.get(positive_identifier)
+        self.evaluator.clean(positive_identifier)
 
-        negative_objective, negative_state = calibrator.get(negative_identifier)
-        calibrator.cleanup(negative_identifier)
+        negative_objective, negative_state = self.evaluator.get(negative_identifier)
+        self.evaluator.clean(negative_identifier)
 
         g_k = (positive_objective - negative_objective) / (2.0 * perturbation_length)
         g_k *= direction**-1
 
         # Update state
-        parameters -= gradient_length * g_k
+        self.parameters -= gradient_length * g_k
 
-        if compute_objective:
-            annotations.update({ "type": "objective" })
-            identifier = calibrator.schedule(parameters, annotations = annotations)
+        if self.compute_objective:
+            annotations = deep_merge.merge(annotations, { "type": "objective" })
+            identifier = self.evaluator.submit(parameters, annotations = annotations)
 
-            calibrator.wait()
+            self.evaluator.wait()
 
-            objective, state = calibrator.get(identifier)
-            calibrator.cleanup(identifier)
-
-        iteration += 1
+            objective, state = self.evaluator.get(identifier)
+            self.evaluator.clean(identifier)
