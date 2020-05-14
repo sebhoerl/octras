@@ -7,7 +7,7 @@ from octras import Loop, Evaluator
 import pytest, warnings
 import numpy as np
 
-def test_bayesian_optimization():
+def __test_bayesian_optimization():
     evaluator = Evaluator(
         simulator = QuadraticSimulator(),
         problem = QuadraticProblem([2.0, 1.0])
@@ -26,7 +26,7 @@ def test_bayesian_optimization():
             algorithm = algorithm
         ) == pytest.approx((2.0, 1.0), 1e-1)
 
-def test_sis_single_fidelity():
+def __test_sis_single_fidelity():
     evaluator = Evaluator(
         simulator = SISSimulator(),
         problem = SISProblem(0.6)

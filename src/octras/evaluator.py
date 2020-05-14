@@ -2,19 +2,6 @@ import uuid, time, logging, deep_merge
 
 logger = logging.getLogger(__name__)
 
-class LogTracker:
-    def __init__(self):
-        self.best_objective = None
-
-    def notify(self, simulation):
-        if self.best_objective is None or simulation["objective"] < self.best_objective:
-            if not ("transient" in simulation and simulation["transient"]):
-                self.best_objective = simulation["objective"]
-
-                logger.info("Found new best objective (%f) at %s" % (
-                    self.best_objective, str(simulation["x"])
-                ))
-
 class Evaluator:
     def __init__(self, problem, simulator, interval = 0.0, parallel = 1, follow_trace = True):
         self.problem = problem
@@ -76,8 +63,8 @@ class Evaluator:
             if self.simulator.ready(identifier):
                 simulation = self.simulations[identifier]
 
-                result = self.simulator.get(identifier)
-                response = self.problem.evaluate(simulation["x"], result)
+                simulation["result"] = self.simulator.get(identifier)
+                response = self.problem.evaluate(simulation["x"], simulation["result"])
 
                 if isinstance(response, tuple):
                     objective, state = response
@@ -117,7 +104,7 @@ class Evaluator:
         if identifiers is None:
             identifiers = [
                 identifier for identifier, simulation in self.simulations.items()
-                if simulation["status"] == "running"
+                if simulation["status"] != "finished"
             ]
 
         if isinstance(identifiers, str):

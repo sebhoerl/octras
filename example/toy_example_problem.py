@@ -1,9 +1,9 @@
-#from octras import Problem
+from octras import Problem
 import pandas as pd
 import numpy as np
 import glob
 
-class FlowCapacityProblem:#(Problem):
+class ToyExampleProblem(Problem):
     """
         Here we define an optimization problem for MATSim. Namely, we want to
         push the mode shares of car and public transport to each 30% by playing
@@ -22,15 +22,15 @@ class FlowCapacityProblem:#(Problem):
         self.number_of_states = 1
 
         # We can provide some information that is passed to the output
-        self.information = dict(problem = "FlowCapacityProblem")
+        self.information = dict(problem = "ToyExampleProblem")
 
         # We can provide the reference state. Currently, it is not used in any
         # optimizer, but it is helpful for plotting optimization results as
         # the existing plotting scripts will know how to use this information.
         self.reference_state = [self.reference_share]
 
-        self.initial = [1.0]
-        self.bounds = [(0.0, 1.0)]
+        self.initial = [0.5]
+        self.bounds = [(0.01, 1.0)]
 
     def prepare(self, x):
         """
@@ -41,7 +41,7 @@ class FlowCapacityProblem:#(Problem):
 
         # First we need to pass some parameters to the simulator
         parameters = dict(config = { # We provide --config: parameters to the simulation
-            "qsim.flowCapacityFactor": min(1.0, max(0.0, x[0])), # Set the car constant
+            "qsim.flowCapacityFactor": max(0.01, min(1.0, x[0])), # Here we can pass config options
         })
 
         return parameters
