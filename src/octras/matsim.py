@@ -17,7 +17,7 @@ class MATSimSimulator(Simulator):
     """
 
     def __init__(self, working_directory, **parameters):
-        self.working_directory = working_directory
+        self.working_directory = os.path.realpath(working_directory)
         self.parameters = parameters
 
         if not "memory" in self.parameters:
