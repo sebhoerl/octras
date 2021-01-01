@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 # https://www.jhuapl.edu/spsa/PDF-SPSA/Spall_Implementation_of_the_Simultaneous.PDF
 
 class SPSA:
-    def __init__(self, evaluator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = False, seed = None):
+    def __init__(self, evaluator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = True, seed = None):
         self.evaluator = evaluator
 
         self.perturbation_factor = perturbation_factor
@@ -36,6 +36,11 @@ class SPSA:
         if self.parameters is None:
             self.parameters = self.evaluator.problem.initial
 
+        # Calculate objective
+        if self.compute_objective:
+            annotations = { "type": "objective" }
+            objective_identifier = self.evaluator.submit(self.parameters, annotations = annotations)
+
         # Update step lengths
         gradient_length = self.gradient_factor / (self.iteration + self.gradient_offset)**self.gradient_exponent
         perturbation_length = self.perturbation_factor / self.iteration**self.perturbation_exponent
@@ -46,7 +51,8 @@ class SPSA:
         annotations = {
             "gradient_length": gradient_length,
             "perturbation_length": perturbation_length,
-            "direction": direction
+            "direction": direction,
+            "type": "gradient"
         }
 
         # Schedule samples
@@ -63,6 +69,9 @@ class SPSA:
         # Wait for gradient run results
         self.evaluator.wait()
 
+        if self.compute_objective:
+            self.evaluator.clean(objective_identifier)
+
         positive_objective, positive_state = self.evaluator.get(positive_identifier)
         self.evaluator.clean(positive_identifier)
 
@@ -74,12 +83,3 @@ class SPSA:
 
         # Update state
         self.parameters -= gradient_length * g_k
-
-        if self.compute_objective:
-            annotations = deep_merge.merge(annotations, { "type": "objective" })
-            identifier = self.evaluator.submit(parameters, annotations = annotations)
-
-            self.evaluator.wait()
-
-            objective, state = self.evaluator.get(identifier)
-            self.evaluator.clean(identifier)

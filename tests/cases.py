@@ -42,7 +42,7 @@ class QuadraticProblem(Problem):
         self.u = u
 
         self.initial = initial
-        self.bounds = [[-10, 10]] * len(u)
+        self.bounds = [[-10.0, 10.0]] * len(u)
 
     def prepare(self, x):
         return dict(x = x, u = self.u)

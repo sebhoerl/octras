@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 # https://www.jhuapl.edu/spsa/PDF-SPSA/Spall_Implementation_of_the_Simultaneous.PDF
 
 class FDSA:
-    def __init__(self, evaluator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = False):
+    def __init__(self, evaluator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = True):
         self.evaluator = evaluator
 
         self.perturbation_factor = perturbation_factor
@@ -33,13 +33,19 @@ class FDSA:
         if self.parameters is None:
             self.parameters = self.evaluator.problem.initial
 
+        # Calculate objective
+        if self.compute_objective:
+            annotations = { "type": "objective" }
+            objective_identifier = self.evaluator.submit(self.parameters, annotations = annotations)
+
         # Update lengths
         gradient_length = self.gradient_factor / (self.iteration + self.gradient_offset)**self.gradient_exponent
         perturbation_length = self.perturbation_factor / self.iteration**self.perturbation_exponent
 
         annotations = {
             "gradient_length" : gradient_length,
-            "perturbation_length": perturbation_length
+            "perturbation_length": perturbation_length,
+            "type": "gradient"
         }
 
         # I) Calculate gradients
@@ -65,6 +71,9 @@ class FDSA:
         # Wait for gradient run results
         self.evaluator.wait()
 
+        if self.compute_objective:
+            self.evaluator.clean(objective_identifier)
+
         for d, item in enumerate(gradient_information):
             positive_parameters, positive_identifier, negative_parameters, negative_identifier = item
 
@@ -78,10 +87,3 @@ class FDSA:
 
         # II) Update state
         self.parameters -= gradient_length * gradient
-
-        if self.compute_objective:
-            annotations = deep_merge.merge({ "type": "objective" })
-            identifier = self.evaluator.submit(self.parameters, annotations = annotations)
-
-            objective, state = self.evaluator.get(identifier)
-            self.evaluator.clean(identifier)
