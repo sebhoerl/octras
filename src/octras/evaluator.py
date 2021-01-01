@@ -65,7 +65,9 @@ class Evaluator:
 
                 simulation["result"] = self.simulator.get(identifier)
                 response = self.problem.evaluate(simulation["x"], simulation["result"])
+
                 information = None
+                state = None
 
                 if isinstance(response, tuple):
                     objective = response[0]
@@ -76,7 +78,7 @@ class Evaluator:
                     if len(response) > 2:
                         information = response[2]
                 else:
-                    objective, state = response, None
+                    objective = response
 
                 if not state is None:
                     if not len(state) == self.problem.number_of_states:

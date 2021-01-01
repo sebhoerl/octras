@@ -1,7 +1,14 @@
 import matplotlib.pyplot as plt
 import pickle
+import numpy as np
+import sys
 
-data = pickle.load(open("optimization_output.p", "rb"))
+path = "optimization_output_nelder_mead.p"
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+
+data = pickle.load(open(path, "rb"))
 
 objectives = []
 parameters = []
@@ -30,8 +37,17 @@ plt.xlabel("Iteration")
 plt.ylabel("Objective")
 
 plt.subplot(1,2,2)
-plt.plot(parameters, color = "C0", alpha = 0.25, marker = ".", linestyle = "none")
-plt.plot(best_parameters, color = "C0")
+
+parameters = np.array(parameters).T
+
+for index, row in enumerate(parameters):
+    plt.plot(row, color = "C%d" % index, alpha = 0.25, marker = ".", linestyle = "none")
+
+best_parameters = np.array(best_parameters).T
+
+for index, row in enumerate(best_parameters):
+    plt.plot(row, color = "C%d" % index)
+
 plt.grid()
 plt.xlabel("Iteration")
 plt.ylabel("Parameter")

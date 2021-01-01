@@ -148,4 +148,4 @@ class ParisProblem(Problem):
         """
 
         result = self.analyzer.execute(path)
-        return result["objective"], result["objective"], result
+        return result["objective"], None, result
