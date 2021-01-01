@@ -7,15 +7,17 @@ from octras.algorithms import RandomWalk, CMAES, SPSA, NelderMead #, BatchBayesi
 from problem import ParisProblem
 from analyzer import ParisAnalyzer
 
-import numpy as np
-
 import logging
 logging.basicConfig(level = logging.INFO)
 
-total_threads = 4
 threads_per_simulation = 4
-iterations = 10
+parallel_simulations = 1
+iterations = 2
+
 output_path = "optimization.p"
+
+reference_path = "resources/hts_trips.csv"
+config_path = "resources/scenario/config.xml"
 
 simulator = MATSimSimulator(
     working_directory = "work",
@@ -26,20 +28,20 @@ simulator = MATSimSimulator(
 analyzer = ParisAnalyzer(
     threshold = 0.05,
     number_of_bounds = 40,
-    cutoff_distance = 4 * 1e3,
-    reference_path = "resources/hts_trips.csv"
+    cutoff_distance = 40 * 1e3,
+    reference_path = reference_path
 )
 
 problem = ParisProblem(analyzer,
     threads = threads_per_simulation,
     iterations = iterations,
-    config_path = "resources/scenario/config.xml"
+    config_path = config_path
 )
 
 evaluator = Evaluator(
     problem = problem,
     simulator = simulator,
-    parallel = np.floor(total_threads / threads_per_simulation)
+    parallel = parallel_simulations
 )
 
 algorithm = SPSA(

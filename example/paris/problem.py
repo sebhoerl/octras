@@ -125,8 +125,8 @@ class ParisProblem(Problem):
             arguments.append(str(value))
 
         arguments += [
-            "--mode-choice-parameter:car.constantAccessEgressWalkTime_min", "0.0",
-            "--mode-choice-parameter:car.constantParkingSearchPenalty_min", "0.0",
+            "--mode-choice-parameter:car.constantAccessEgressWalkTime_min", "4.0",
+            "--mode-choice-parameter:car.constantParkingSearchPenalty_min", "4.0",
         ]
 
         arguments += [
@@ -148,4 +148,4 @@ class ParisProblem(Problem):
         """
 
         result = self.analyzer.execute(path)
-        return result["objective"], result
+        return result["objective"], result["objective"], result

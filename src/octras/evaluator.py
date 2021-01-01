@@ -65,9 +65,16 @@ class Evaluator:
 
                 simulation["result"] = self.simulator.get(identifier)
                 response = self.problem.evaluate(simulation["x"], simulation["result"])
+                information = None
 
                 if isinstance(response, tuple):
-                    objective, state = response
+                    objective = response[0]
+
+                    if len(response) > 1:
+                        state = response[1]
+
+                    if len(response) > 2:
+                        information = response[2]
                 else:
                     objective, state = response, None
 
@@ -83,6 +90,7 @@ class Evaluator:
                 simulation["objective"] = objective
                 simulation["state"] = state
                 simulation["status"] = "finished"
+                simulation["information"] = information
 
                 simulation["evaluator_runs"] = self.current_runs
                 simulation["evaluator_cost"] = self.current_cost
