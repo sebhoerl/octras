@@ -73,13 +73,16 @@ class ParisAnalyzer:
 
     def calculate_objective(self, reference_shares, simulation_shares):
         objective = 0.0
+        items = 0
 
         for mode in self.modes:
             objective += np.sum(np.maximum(self.threshold,
                 reference_shares[mode] - simulation_shares[mode]
             ))
 
-        return objective
+            items += len(reference_shares[mode])
+
+        return objective / items
 
     def execute(self, output_path):
         df_reference = self.prepare_reference(self.reference_path)
