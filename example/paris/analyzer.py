@@ -89,9 +89,9 @@ class ParisAnalyzer:
         df_simulation = self.prepare_simulation(output_path)
 
         # Regional shares
-        regional_bounds = self.calculate_bounds(df_reference)
-        region_reference_shares = self.calculate_shares(df_reference, regional_bounds)
-        region_simulation_shares = self.calculate_shares(df_simulation, regional_bounds)
+        region_bounds = self.calculate_bounds(df_reference)
+        region_reference_shares = self.calculate_shares(df_reference, region_bounds)
+        region_simulation_shares = self.calculate_shares(df_simulation, region_bounds)
         region_objective = self.calculate_objective(region_reference_shares, region_simulation_shares)
 
         # Paris shares
