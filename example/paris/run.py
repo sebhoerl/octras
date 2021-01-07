@@ -28,7 +28,8 @@ simulator = MATSimSimulator(
 analyzer = ParisAnalyzer(
     threshold = 0.05,
     number_of_bounds = 40,
-    cutoff_distance = 40 * 1e3,
+    minimum_distance = 100.0,
+    maximum_distance = 40 * 1e3,
     reference_path = reference_path
 )
 

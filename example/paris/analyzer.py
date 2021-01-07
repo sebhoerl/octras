@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 
 class ParisAnalyzer:
-    def __init__(self, threshold, number_of_bounds, cutoff_distance, reference_path, modes = ["car", "pt", "bike", "walk"]):
+    def __init__(self, threshold, number_of_bounds, minimum_distance, maximum_distance, reference_path, modes = ["car", "pt", "bike", "walk"]):
         self.threshold = threshold
         self.number_of_bounds = number_of_bounds
-        self.cutoff_distance = cutoff_distance
+        self.maximum_distance = maximum_distance
+        self.minimum_distance = minimum_distance
         self.reference_path = reference_path
         self.modes = modes
 
@@ -14,7 +15,10 @@ class ParisAnalyzer:
         df["is_urban"] = (df["origin_departement_id"] == 75) & (df["destination_departement_id"] == 75)
         df["weight"] = df["trip_weight"]
 
-        df = df[df["euclidean_distance"] > 0.0]
+        df = df[df["euclidean_distance"] <= self.maximum_distance]
+        df = df[df["euclidean_distance"] >= self.minimum_distance]
+        df = df[df["mode"].isin(self.modes)]
+
         return df
 
     def prepare_simulation(self, output_path):
@@ -25,14 +29,13 @@ class ParisAnalyzer:
         df = pd.merge(df, df_urban, on = ["person_id", "person_trip_id"])
         df["is_urban"] = df["urban_origin"] & df["urban_destination"]
 
-        df = df[df["euclidean_distance"] > 0.0]
+        df = df[df["euclidean_distance"] <= self.maximum_distance]
+        df = df[df["euclidean_distance"] >= self.minimum_distance]
+        df = df[df["mode"].isin(self.modes)]
+
         return df
 
     def calculate_bounds(self, df):
-        df = df[
-            df["mode"].isin(self.modes) & (df["euclidean_distance"] <= self.cutoff_distance)
-        ]
-
         distances = df["euclidean_distance"].values
         weights = df["weight"].values
 
@@ -43,7 +46,7 @@ class ParisAnalyzer:
         cdf = np.cumsum(weights)
         cdf = cdf / np.sum(weights)
 
-        return np.unique([0] + [
+        return np.unique([self.minimum_distance] + [
             np.max(distances[cdf <= p])
             for p in np.linspace(0.0, 1.0, self.number_of_bounds)[1:]
         ])
@@ -124,7 +127,8 @@ if __name__ == "__main__":
     analyzer = ParisAnalyzer(
         threshold = 0.05,
         number_of_bounds = 40,
-        cutoff_distance = 40 * 1e3,
+        minimum_distance = 100.0,
+        maximum_distance = 40 * 1e3,
         reference_path = "/home/shoerl/gpe/data/pipeline_hts/hts_trips.csv")
 
     result = analyzer.execute("/home/shoerl/gpe/output_1pm/simulation_output")

@@ -27,16 +27,16 @@ for row in data:
         plt.title("Region (%d)" % index)
 
         for mode, color in zip(modes, COLORS):
-            plt.plot(np.log10(info["bounds"][1:]), info["region_reference_shares"][mode], linestyle = ":", color = color)
-            plt.plot(np.log10(info["bounds"][1:]), info["region_simulation_shares"][mode], linestyle = "-", color = color)
+            plt.plot(np.log10(info["region_bounds"][1:]), info["region_reference_shares"][mode], linestyle = ":", color = color)
+            plt.plot(np.log10(info["region_bounds"][1:]), info["region_simulation_shares"][mode], linestyle = "-", color = color)
 
         plt.subplot(1, 2, 2)
 
         plt.title("Paris (%d)" % index)
 
         for mode, color in zip(modes, COLORS):
-            plt.plot(np.log10(info["bounds"][1:]), info["paris_reference_shares"][mode], linestyle = ":", color = color)
-            plt.plot(np.log10(info["bounds"][1:]), info["paris_simulation_shares"][mode], linestyle = "-", color = color)
+            plt.plot(np.log10(info["paris_bounds"][1:]), info["paris_reference_shares"][mode], linestyle = ":", color = color)
+            plt.plot(np.log10(info["paris_bounds"][1:]), info["paris_simulation_shares"][mode], linestyle = "-", color = color)
 
         plt.tight_layout()
         plt.savefig("shares/%05d.png" % index)
