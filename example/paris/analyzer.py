@@ -88,31 +88,31 @@ class ParisAnalyzer:
         df_reference = self.prepare_reference(self.reference_path)
         df_simulation = self.prepare_simulation(output_path)
 
-        bounds = self.calculate_bounds(df_reference)
-
         # Regional shares
-        region_reference_shares = self.calculate_shares(df_reference, bounds)
-        region_simulation_shares = self.calculate_shares(df_simulation, bounds)
+        regional_bounds = self.calculate_bounds(df_reference)
+        region_reference_shares = self.calculate_shares(df_reference, regional_bounds)
+        region_simulation_shares = self.calculate_shares(df_simulation, regional_bounds)
         region_objective = self.calculate_objective(region_reference_shares, region_simulation_shares)
 
         # Paris shares
         df_reference = df_reference[df_reference["is_urban"]]
         df_simulation = df_simulation[df_simulation["is_urban"]]
 
-        paris_reference_shares = self.calculate_shares(df_reference, bounds)
-        paris_simulation_shares = self.calculate_shares(df_simulation, bounds)
+        paris_bounds = self.calculate_bounds(df_reference)
+        paris_reference_shares = self.calculate_shares(df_reference, paris_bounds)
+        paris_simulation_shares = self.calculate_shares(df_simulation, paris_bounds)
         paris_objective = self.calculate_objective(paris_reference_shares, paris_simulation_shares)
 
         # Total objective
         objective = 0.5 * (paris_objective + region_objective)
 
         return {
-            "bounds": bounds,
-
+            "region_bounds": region_bounds,
             "region_reference_shares": region_reference_shares,
             "region_simulation_shares": region_simulation_shares,
             "region_objective": region_objective,
 
+            "paris_bounds": paris_bounds,
             "paris_reference_shares": paris_reference_shares,
             "paris_simulation_shares": paris_simulation_shares,
             "paris_objective": paris_objective,

@@ -55,3 +55,10 @@ plt.ylabel("Parameter")
 plt.tight_layout()
 
 plt.show()
+
+perturbation_lengths = []
+gradient_lengths = []
+
+for row in data:
+    perturbation_factors.append(row["annotation"]["perturbation_length"])
+    gradient_lengths.append(row["annotation"]["gradient_length"])
