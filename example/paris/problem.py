@@ -115,7 +115,10 @@ class ParisProblem(Problem):
         parameters = dict(config = { # We provide --config: parameters to the simulation
             "qsim.numberOfThreads": self.threads,
             "global.numberOfThreads": self.threads,
-            "eqasim.tripAnalysisInterval": self.iterations
+            "eqasim.tripAnalysisInterval": self.iterations,
+            "controler.writeTripsInterval": 0,
+            "linkStats.writeLinkStatsInterval": 0,
+            "counts.writeCountsInterval": 0
         }, iterations = self.iterations)
 
         arguments = []
