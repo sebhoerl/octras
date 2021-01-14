@@ -134,7 +134,8 @@ class ParisProblem(Problem):
 
         arguments += [
             "--config-path", self.config_path,
-            "--use-epsilon"
+            "--use-epsilon",
+            "--convergence-threshold", "0.05"
         ]
 
         parameters["arguments"] = arguments
