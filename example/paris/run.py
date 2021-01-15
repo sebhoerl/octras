@@ -29,7 +29,7 @@ analyzer = ParisAnalyzer(
     threshold = 0.05,
     number_of_bounds = 40,
     minimum_distance = 100.0,
-    maximum_distance = 40 * 1e3,
+    maximum_distance = dict(region = 40 * 1e3, paris = 20 * 1e3),
     reference_path = reference_path
 )
 

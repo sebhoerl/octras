@@ -81,7 +81,7 @@ class ParisAnalyzer:
         for mode in self.modes:
             objective += np.sum(np.maximum(self.threshold,
                 reference_shares[mode] - simulation_shares[mode]
-            ))
+            ) - self.threshold)
 
             items += len(reference_shares[mode])
 
