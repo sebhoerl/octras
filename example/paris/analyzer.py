@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 class ParisAnalyzer:
-    def __init__(self, threshold, number_of_bounds, minimum_distance, maximum_distance, reference_path, modes = ["car", "pt", "bike", "walk"], objective = "L2"):
+    def __init__(self, threshold, number_of_bounds, minimum_distance, maximum_distance, reference_path, modes = ["car", "pt", "bike", "walk"], objective = "sum"):
         self.threshold = threshold
         self.number_of_bounds = number_of_bounds
         self.maximum_distance = maximum_distance
@@ -78,7 +78,7 @@ class ParisAnalyzer:
     def calculate_objective(self, reference_shares, simulation_shares):
         objective = 0.0
 
-        if self.objective == "L2":
+        if self.objective == "sum":
             items = 0
 
             for mode in self.modes:
