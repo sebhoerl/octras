@@ -2,13 +2,14 @@ import pandas as pd
 import numpy as np
 
 class ParisAnalyzer:
-    def __init__(self, threshold, number_of_bounds, minimum_distance, maximum_distance, reference_path, modes = ["car", "pt", "bike", "walk"]):
+    def __init__(self, threshold, number_of_bounds, minimum_distance, maximum_distance, reference_path, modes = ["car", "pt", "bike", "walk"], objective = "L2"):
         self.threshold = threshold
         self.number_of_bounds = number_of_bounds
         self.maximum_distance = maximum_distance
         self.minimum_distance = minimum_distance
         self.reference_path = reference_path
         self.modes = modes
+        self.objective = objective
 
     def prepare_reference(self, reference_path):
         df = pd.read_csv(reference_path, sep = ";")
@@ -76,16 +77,28 @@ class ParisAnalyzer:
 
     def calculate_objective(self, reference_shares, simulation_shares):
         objective = 0.0
-        items = 0
 
-        for mode in self.modes:
-            objective += np.sum(np.maximum(self.threshold,
-                reference_shares[mode] - simulation_shares[mode]
-            ) - self.threshold)
+        if self.objective == "L2":
+            items = 0
 
-            items += len(reference_shares[mode])
+            for mode in self.modes:
+                objective += np.sum(np.maximum(self.threshold,
+                    reference_shares[mode] - simulation_shares[mode]
+                ) - self.threshold)
 
-        return objective / items
+                items += len(reference_shares[mode])
+
+            objective = objective / items
+
+        elif self.objective == "max":
+            for mode in self.modes:
+                objective = max(objective, np.max(np.maximum(self.threshold,
+                    np.max(reference_shares[mode] - simulation_shares[mode])
+                ) - self.threshold))
+        else:
+            raise RuntimeError()
+
+        return objective
 
     def execute(self, output_path):
         df_reference = self.prepare_reference(self.reference_path)
