@@ -2,6 +2,7 @@ from octras import Problem
 
 import pandas as pd
 import numpy as np
+import os.path
 
 NAMES = [
     "majorFactor",
@@ -28,7 +29,7 @@ class ParisFlowProblem(Problem):
         around with the mode constants.
     """
 
-    def __init__(self, analyzer, sampling_rate, threads, iterations, config_path):
+    def __init__(self, analyzer, sampling_rate, threads, iterations, config_path, reference_path):
         """
             We pass some desired reference values and save them.
         """
@@ -54,6 +55,7 @@ class ParisFlowProblem(Problem):
         self.config_path = config_path
 
         self.sampling_rate = sampling_rate
+        self.reference_path = reference_path
 
     def prepare(self, x):
         """
@@ -85,7 +87,8 @@ class ParisFlowProblem(Problem):
         arguments += [
             "--config-path", self.config_path,
             "--use-epsilon",
-            "--convergence-threshold", "0.05"
+            "--convergence-threshold", "0.05",
+            "--flow-path", os.path.realpath(self.reference_path)
         ]
 
         parameters["arguments"] = arguments
