@@ -80,7 +80,7 @@ class ParisFlowProblem(Problem):
             arguments.append("--capacity:%s" % name)
 
             value = np.maximum(0.25, value)
-            value = np.minimum(1.25, value)
+            value = np.minimum(1.75, value)
 
             arguments.append(str(value * self.sampling_rate))
 
