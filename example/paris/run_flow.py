@@ -30,7 +30,6 @@ analyzer = ParisDailyFlowAnalyzer(
 )
 
 problem = ParisFlowProblem(analyzer,
-    sampling_rate = 0.001,
     threads = threads_per_simulation,
     iterations = iterations,
     config_path = config_path,

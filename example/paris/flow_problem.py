@@ -29,7 +29,7 @@ class ParisFlowProblem(Problem):
         around with the mode constants.
     """
 
-    def __init__(self, analyzer, sampling_rate, threads, iterations, config_path, reference_path):
+    def __init__(self, analyzer, threads, iterations, config_path, reference_path):
         """
             We pass some desired reference values and save them.
         """
@@ -54,7 +54,6 @@ class ParisFlowProblem(Problem):
         self.iterations = iterations
         self.config_path = config_path
 
-        self.sampling_rate = sampling_rate
         self.reference_path = reference_path
 
     def prepare(self, x):
@@ -82,7 +81,7 @@ class ParisFlowProblem(Problem):
             value = np.maximum(0.25, value)
             value = np.minimum(1.75, value)
 
-            arguments.append(str(value * self.sampling_rate))
+            arguments.append(str(value))
 
         arguments += [
             "--config-path", self.config_path,
