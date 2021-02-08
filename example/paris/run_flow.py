@@ -26,8 +26,6 @@ simulator = MATSimSimulator(
 )
 
 analyzer = ParisDailyFlowAnalyzer(
-    threshold = 0.05,
-    sampling_rate = 0.001,
     reference_path = reference_path
 )
 
