@@ -5,9 +5,9 @@ import numpy as np
 import os.path
 
 NAMES = [
-    "majorFactor",
-    "immediateFactor",
-    "minorFactor",
+    "major",
+    "immediate",
+    "minor",
 ]
 
 BOUNDS = [
