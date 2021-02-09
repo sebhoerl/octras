@@ -8,7 +8,7 @@ NAMES = [
     "capacity:major",
     "capacity:immediate",
     "capacity:minor",
-    "eqasim:crossingPenalty"
+    "config:eqasim.crossingPenalty"
 ]
 
 BOUNDS = [
