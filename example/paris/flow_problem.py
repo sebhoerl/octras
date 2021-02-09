@@ -5,21 +5,24 @@ import numpy as np
 import os.path
 
 NAMES = [
-    "major",
-    "immediate",
-    "minor",
+    "capacity:major",
+    "capacity:immediate",
+    "capacity:minor",
+    "eqasim:crossingPenalty"
 ]
 
 BOUNDS = [
     (0.25, 1.25),
     (0.25, 1.25),
     (0.25, 1.25),
+    (0.0, 10.0),
 ]
 
 INITIALS = [
     1.0,
     1.0,
-    1.0
+    1.0,
+    3.0
 ]
 
 class ParisFlowProblem(Problem):
@@ -75,11 +78,11 @@ class ParisFlowProblem(Problem):
 
         arguments = []
 
-        for value, name in zip(x, NAMES):
-            arguments.append("--capacity:%s" % name)
+        for index, (value, name) in enumerate(zip(x, NAMES)):
+            arguments.append("--%s" % name)
 
-            value = np.maximum(0.25, value)
-            value = np.minimum(1.75, value)
+            value = np.maximum(BOUNDS[index][0], value)
+            value = np.minimum(BOUNDS[index][1], value)
 
             arguments.append(str(value))
 
