@@ -88,7 +88,8 @@ class ParisFlowProblem(Problem):
 
         arguments += [
             "--config-path", self.config_path,
-            "--use-epsilon",
+            # "--use-epsilon", # Temporarily removed to keep modes fix
+            "--fix-modes", # To keep modes fix
             "--convergence-threshold", "0.05",
             "--flow-path", os.path.realpath(self.reference_path)
         ]

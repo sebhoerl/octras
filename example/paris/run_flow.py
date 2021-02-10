@@ -12,7 +12,7 @@ logging.basicConfig(level = logging.INFO)
 
 threads_per_simulation = 4
 parallel_simulations = 1
-iterations = 2
+iterations = 40
 
 output_path = "optimization.p"
 
