@@ -41,7 +41,7 @@ class ParisFlowProblem(Problem):
         """
 
         # We need to provide some mandatory information
-        self.number_of_parameters = 4
+        self.number_of_parameters = 5
         self.number_of_states = 1
 
         # We can provide some information that is passed to the output
