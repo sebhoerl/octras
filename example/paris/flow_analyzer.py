@@ -8,6 +8,7 @@ class ParisDailyFlowAnalyzer:
 
     def prepare_reference(self, reference_path):
         df = pd.read_csv(reference_path, sep = ";")
+        df = df[df["osm"].isin(["motorway", "trunk", "primary", "secondary"])]
         df = df.groupby("link_id").sum().reset_index()[["link_id", "flow"]]
         df = df.rename(columns = { "flow": "reference_count" })
         return df

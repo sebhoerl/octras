@@ -6,8 +6,9 @@ import os.path
 
 NAMES = [
     "capacity:major",
-    "capacity:immediate",
+    "capacity:intermediate",
     "capacity:minor",
+    "capacity:link",
     "config:eqasim.crossingPenalty"
 ]
 
@@ -15,10 +16,12 @@ BOUNDS = [
     (0.25, 1.25),
     (0.25, 1.25),
     (0.25, 1.25),
+    (0.25, 1.25),
     (0.0, 10.0),
 ]
 
 INITIALS = [
+    1.0,
     1.0,
     1.0,
     1.0,
