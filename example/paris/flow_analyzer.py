@@ -30,8 +30,9 @@ class ParisDailyFlowAnalyzer:
         simulation_values = df["simulation_count"].values * factor
         reference_values = df["reference_count"].values
         relative_errors = np.abs((simulation_values - reference_values) / reference_values)
+        capped_errors = np.maximum(0.2, relative_errors) - 0.2
 
-        return np.mean(relative_errors <= 0.2)
+        return np.mean(capped_errors)
 
     def execute(self, output_path):
         df_reference = self.prepare_reference(self.reference_path)
