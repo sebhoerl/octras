@@ -9,7 +9,7 @@ NAMES = [
     "capacity:intermediate",
     "capacity:minor",
     "capacity:link",
-    "config:eqasim.crossingPenalty"
+    "config:eqasim.crossingPenalty",
     "mode-choice-parameter:car.alpha_u",
     "mode-choice-parameter:car.betaTravelTime_u_min",
 ]
