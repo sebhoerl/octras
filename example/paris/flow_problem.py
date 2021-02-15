@@ -21,7 +21,7 @@ BOUNDS = [
     (0.25, 1.75),
     (0.0, 10.0),
     (-3.0, 3.0),
-    (-3.0, 0.0)
+    (-1.0, 0.0)
 ]
 
 INITIALS = [
@@ -31,7 +31,7 @@ INITIALS = [
     1.0,
     3.0,
     1.35,
-    -0.06
+    -0.6
 ]
 
 class ParisFlowProblem(Problem):
@@ -92,6 +92,9 @@ class ParisFlowProblem(Problem):
 
             value = np.maximum(BOUNDS[index][0], value)
             value = np.minimum(BOUNDS[index][1], value)
+
+            if "betaTravelTime_u_min" in name:
+                value *= 0.1
 
             arguments.append(str(value))
 
