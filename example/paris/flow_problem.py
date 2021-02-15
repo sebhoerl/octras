@@ -10,6 +10,8 @@ NAMES = [
     "capacity:minor",
     "capacity:link",
     "config:eqasim.crossingPenalty"
+    "mode-choice-parameter:car.alpha_u",
+    "mode-choice-parameter:car.betaTravelTime_u_min",
 ]
 
 BOUNDS = [
@@ -18,6 +20,8 @@ BOUNDS = [
     (0.25, 1.75),
     (0.25, 1.75),
     (0.0, 10.0),
+    (-3.0, 3.0),
+    (-3.0, 0.0)
 ]
 
 INITIALS = [
@@ -25,7 +29,8 @@ INITIALS = [
     1.0,
     1.0,
     1.0,
-    3.0
+    1.35,
+    -0.06
 ]
 
 class ParisFlowProblem(Problem):
@@ -41,7 +46,7 @@ class ParisFlowProblem(Problem):
         """
 
         # We need to provide some mandatory information
-        self.number_of_parameters = 5
+        self.number_of_parameters = 7
         self.number_of_states = 1
 
         # We can provide some information that is passed to the output
@@ -91,10 +96,11 @@ class ParisFlowProblem(Problem):
 
         arguments += [
             "--config-path", self.config_path,
-            # "--use-epsilon", # Temporarily removed to keep modes fix
-            "--fix-modes", # To keep modes fix
+            "--use-epsilon", # Temporarily removed to keep modes fix
+            #"--fix-modes", # To keep modes fix
             "--convergence-threshold", "0.05",
-            "--flow-path", os.path.realpath(self.reference_path)
+            "--flow-path", os.path.realpath(self.reference_path),
+            "--config:qsim.storageCapacityFactor", "1000000"
         ]
 
         parameters["arguments"] = arguments
