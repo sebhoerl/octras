@@ -12,16 +12,16 @@ logging.basicConfig(level = logging.INFO)
 
 threads_per_simulation = 4
 parallel_simulations = 1
-iterations = 2
+iterations = 60
 
 output_path = "optimization.p"
 
-reference_path = "resources/hts_trips.csv"
-config_path = "resources/scenario/config.xml"
+reference_path = "resources/reference_trips.csv"
+config_path = "resources/scenario/ile_de_france_config.xml"
 
 simulator = MATSimSimulator(
     working_directory = "work",
-    class_path = "resources/ile_de_france-1.2.0.jar",
+    class_path = "resources/ile_de_france-1.2.1.jar",
     main_class = "org.eqasim.ile_de_france.RunSimulation"
 )
 
