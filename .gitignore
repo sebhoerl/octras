@@ -5,3 +5,5 @@ gis
 .env
 src/octras.egg-info
 env
+/backup
+/.ipynb_checkpoints

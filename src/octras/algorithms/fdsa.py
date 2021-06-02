@@ -2,14 +2,14 @@ import numpy as np
 import deep_merge
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("octras")
+
+from octras import Evaluator
 
 # https://www.jhuapl.edu/spsa/PDF-SPSA/Spall_Implementation_of_the_Simultaneous.PDF
 
 class FDSA:
-    def __init__(self, evaluator, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = True):
-        self.evaluator = evaluator
-
+    def __init__(self, problem, perturbation_factor, gradient_factor, perturbation_exponent = 0.101, gradient_exponent = 0.602, gradient_offset = 0, compute_objective = True):
         self.perturbation_factor = perturbation_factor
         self.perturbation_exponent = perturbation_exponent
 
@@ -21,22 +21,25 @@ class FDSA:
 
         self.iteration = 0
 
-        if not hasattr(self.evaluator.problem, "initial"):
-            raise RuntimeError("Initial parameters must be provided by problem for FDSA")
+        problem_information = problem.get_information()
 
-        self.parameters = None
+        if not "number_of_parameters" in problem_information:
+            raise RuntimeError("FDSA expects number_of_parameters in problem information.")
 
-    def advance(self):
+        if not "initial_values" in problem_information:
+            raise RuntimeError("FDSA expects initial_values in problem information.")
+
+        self.number_of_parameters = problem_information["number_of_parameters"]
+        self.parameters = np.array(problem_information["initial_values"])
+
+    def advance(self, evaluator: Evaluator):
         self.iteration += 1
         logger.info("Starting FDSA iteration %d." % self.iteration)
-
-        if self.parameters is None:
-            self.parameters = self.evaluator.problem.initial
 
         # Calculate objective
         if self.compute_objective:
             annotations = { "type": "objective" }
-            objective_identifier = self.evaluator.submit(self.parameters, annotations = annotations)
+            objective_identifier = evaluator.submit(self.parameters, annotations = annotations)
 
         # Update lengths
         gradient_length = self.gradient_factor / (self.iteration + self.gradient_offset)**self.gradient_exponent
@@ -59,29 +62,29 @@ class FDSA:
             positive_parameters = np.copy(self.parameters)
             positive_parameters[d] += perturbation_length
             annotations = deep_merge.merge(annotations, { "type": "positive_gradient" })
-            positive_identifier = self.evaluator.submit(positive_parameters, annotations = annotations)
+            positive_identifier = evaluator.submit(positive_parameters, annotations = annotations)
 
             negative_parameters = np.copy(self.parameters)
             negative_parameters[d] -= perturbation_length
             annotations = deep_merge.merge(annotations, { "sign": "negative_gradient" })
-            negative_identifier = self.evaluator.submit(negative_parameters, annotations = annotations)
+            negative_identifier = evaluator.submit(negative_parameters, annotations = annotations)
 
             gradient_information.append((positive_parameters, positive_identifier, negative_parameters, negative_identifier))
 
         # Wait for gradient run results
-        self.evaluator.wait()
+        evaluator.wait()
 
         if self.compute_objective:
-            self.evaluator.clean(objective_identifier)
+            evaluator.clean(objective_identifier)
 
         for d, item in enumerate(gradient_information):
             positive_parameters, positive_identifier, negative_parameters, negative_identifier = item
 
-            positive_objective, positive_state = self.evaluator.get(positive_identifier)
-            self.evaluator.clean(positive_identifier)
+            positive_objective, positive_state = evaluator.get(positive_identifier)
+            evaluator.clean(positive_identifier)
 
-            negative_objective, negative_state = self.evaluator.get(negative_identifier)
-            self.evaluator.clean(negative_identifier)
+            negative_objective, negative_state = evaluator.get(negative_identifier)
+            evaluator.clean(negative_identifier)
 
             gradient[d] = (positive_objective - negative_objective) / (2.0 * perturbation_length)
 

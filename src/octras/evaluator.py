@@ -1,9 +1,12 @@
 import uuid, time, logging, deep_merge
 
-logger = logging.getLogger(__name__)
+from .simulator import Simulator
+from .problem import Problem
+
+logger = logging.getLogger("octras")
 
 class Evaluator:
-    def __init__(self, problem, simulator, interval = 0.0, parallel = 1, follow_trace = True):
+    def __init__(self, problem : Problem, simulator : Simulator, interval = 0.0, parallel = 1, follow_trace = True):
         self.problem = problem
         self.simulator = simulator
         self.interval = interval
@@ -15,14 +18,18 @@ class Evaluator:
         self.running = []
         self.finished = []
 
-        self.current_runs = 0
+        self.current_evaluations = 0
         self.current_cost = 0
 
         self.follow_trace = follow_trace
         self.trace = []
 
-        if not hasattr(problem, "number_of_parameters"):
-            raise RuntimeError("Problems should have a number_of_parameters field.")
+        problem_information = problem.get_information()
+
+        if not"number_of_parameters" in problem_information:
+            raise RuntimeError("Problem information does not provide number_of_parameters.")
+
+        self.number_of_parameters = problem_information["number_of_parameters"]
 
     def _create_identifier(self):
         identifier = str(uuid.uuid4())
@@ -33,13 +40,13 @@ class Evaluator:
         return identifier
 
     def submit(self, x, simulator_parameters = {}, annotations = {}, transient = False):
-        if len(x) != self.problem.number_of_parameters:
+        if len(x) != self.number_of_parameters:
             raise RuntimeError("Invalid number of parameters: %d (expected %d)" % (
-                len(x), self.problem.number_of_parameters
+                len(x), self.number_of_parameters
             ))
 
         identifier = self._create_identifier()
-        response = self.problem.prepare(x)
+        response = self.problem.parameterize(x)
 
         if isinstance(response, tuple):
             parameters, cost = response
@@ -81,12 +88,19 @@ class Evaluator:
                     objective = response
 
                 if not state is None:
-                    if not len(state) == self.problem.number_of_states:
+                    problem_information = self.problem.get_information()
+
+                    if not "number_of_states" in problem_information:
+                        raise RuntimeError("Problem return state, but problem information does not provide number_of_states")
+
+                    number_of_states = problem_information["number_of_states"]
+
+                    if not len(state) == number_of_states:
                         raise RuntimeError("Wrong number of states provided: %d (expected %d)" % (
-                            len(state), self.problem.number_of_states
+                            len(state), number_of_states
                         ))
 
-                self.current_runs += 1
+                self.current_evaluations += 1
                 self.current_cost += simulation["cost"]
 
                 simulation["objective"] = objective
@@ -94,7 +108,7 @@ class Evaluator:
                 simulation["status"] = "finished"
                 simulation["information"] = information
 
-                simulation["evaluator_runs"] = self.current_runs
+                simulation["evaluator_evaluations"] = self.current_evaluations
                 simulation["evaluator_cost"] = self.current_cost
 
                 self.running.remove(identifier)

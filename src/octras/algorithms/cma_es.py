@@ -2,27 +2,34 @@ import numpy as np
 import numpy.linalg as la
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("octras")
+
+from octras import Evaluator
 
 # https://en.wikipedia.org/wiki/CMA-ES
 
 class CMAES:
-    def __init__(self, evaluator, candidate_set_size = None, initial_step_size = 0.3, seed = None):
-        self.evaluator = evaluator
-        self.problem = self.evaluator.problem
+    def __init__(self, problem, candidate_set_size = None, initial_step_size = 0.3, seed = None):
+        problem_information = problem.get_information()
 
-        if not hasattr(self.problem, "initial"):
-            raise RuntimeError("CMA-ES expects the problem to provide initial parameters.")
+        if not "initial_values" in problem_information:
+            raise RuntimeError("CMA-ES expects initial_values in problem information.")
+
+        if not "number_of_parameters" in problem_information:
+            raise RuntimeError("CMA-ES expects number_of_parameters in problem information.")
+
+        number_of_parameters = problem_information["number_of_parameters"]
+        self.initial_values = problem_information["initial_values"]
 
         # Selection parameters
-        L_default = 4 + int(np.floor(3 * np.log(self.problem.number_of_parameters)))
+        L_default = 4 + int(np.floor(3 * np.log(number_of_parameters)))
         self.L = L_default if candidate_set_size is None else candidate_set_size
 
         if not candidate_set_size is None and candidate_set_size < L_default:
             logger.warning("Using requested candidate set size %d (recommended is at least %d!)" % (candidate_set_size, L_default))
 
         # Initialize static parameters
-        self.N = self.problem.number_of_parameters
+        self.N = number_of_parameters
 
         self.mu = self.L / 2.0
         self.weights = np.log(self.mu + 0.5) - np.log(np.arange(1, self.mu + 1))
@@ -55,9 +62,9 @@ class CMAES:
 
         self.random = np.random.RandomState(seed)
 
-    def advance(self):
+    def advance(self, evaluator: Evaluator):
         if self.iteration == 0:
-            self.mean = np.copy(self.evaluator.problem.initial).reshape((self.N, 1))
+            self.mean = np.copy(self.initial_values).reshape((self.N, 1))
 
         self.iteration += 1
         logger.info("Starting CMA-ES iteration %d." % self.iteration)
@@ -75,22 +82,22 @@ class CMAES:
         ) + self.mean.T
 
         candidate_identifiers = [
-            self.evaluator.submit(parameters, annotations = annotations)
+            evaluator.submit(parameters, annotations = annotations)
             for parameters in candidate_parameters
         ]
 
         # Wait for samples
-        self.evaluator.wait()
+        evaluator.wait()
 
         # Obtain fitness
         candidate_objectives = np.array([
-            self.evaluator.get(identifier)[0] # We minimize!
+            evaluator.get(identifier)[0] # We minimize!
             for identifier in candidate_identifiers
         ])
 
         # Cleanup
         for identifier in candidate_identifiers:
-            self.evaluator.clean(identifier)
+            evaluator.clean(identifier)
 
         sorter = np.argsort(candidate_objectives)
 

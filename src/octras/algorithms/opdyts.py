@@ -4,7 +4,9 @@ import scipy.optimize as opt
 import copy
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("octras")
+
+from octras import Evaluator
 
 class ApproximateSelectionProblem:
     def __init__(self, v, w, deltas, objectives):
@@ -77,10 +79,7 @@ class AdaptationProblem:
         return result.x
 
 class Opdyts:
-    def __init__(self, evaluator, candidate_set_size, number_of_transitions, perturbation_length = 1.0, adaptation_weight = 0.3, seed = None):
-        self.evaluator = evaluator
-        self.problem = self.evaluator.problem
-
+    def __init__(self, problem, candidate_set_size, number_of_transitions, perturbation_length = 1.0, adaptation_weight = 0.3, seed = 0):
         self.iteration = 0
         self.v, self.w = 0.0, 0.0
 
@@ -99,46 +98,51 @@ class Opdyts:
         if self.candidate_set_size % 2 != 0:
             raise RuntimeError("This Opdyts implementation expects candiate set size as a multiple of 2.")
 
-        if not hasattr(self.problem, "initial"):
-            raise RuntimeError("Opdyts expects the problem to provide initial parameters.")
+        problem_information = problem.get_information()
 
-        if not hasattr(self.problem, "number_of_states"):
-            raise RuntimeError("Opdyts expects the problem to provide number of states.")
+        if not "number_of_parameters" in problem_information:
+            raise RuntimeError("Opdyts expects number_of_parameters in problem information.")
 
-        self.initial = self.problem.initial
+        if not "number_of_states" in problem_information:
+            raise RuntimeError("Opdyts expects number_of_states in problem information.")
+
+        if not "initial_values" in problem_information:
+            raise RuntimeError("Opdyts expects initial_values in problem information.")
+
+        self.number_of_parameters = problem_information["number_of_parameters"]
+        self.number_of_states = problem_information["number_of_states"]
 
         self.initial_identifier = None
         self.initial_objective = None
         self.initial_state = None
-        self.initial_parameters = None
+        self.initial_parameters = problem_information["initial_values"]
 
         self.random = np.random.RandomState(seed)
 
-    def advance(self):
+    def advance(self, evaluator: Evaluator):
         if self.iteration == 0:
             logger.info("Initializing Opdyts")
 
-            self.initial_parameters = self.problem.initial
-            self.initial_identifier = self.evaluator.submit(self.initial_parameters,
+            self.initial_identifier = evaluator.submit(self.initial_parameters,
                 { "iterations": 1 }, { "type": "initial", "transient": True }
             )
-            self.initial_objective, self.initial_state = self.evaluator.get(self.initial_identifier)
+            self.initial_objective, self.initial_state = evaluator.get(self.initial_identifier)
 
         self.iteration += 1
         logger.info("Starting Opdyts iteration %d" % self.iteration)
 
         # Create new set of candidate parameters
-        candidate_parameters = np.zeros((self.candidate_set_size, self.problem.number_of_parameters))
+        candidate_parameters = np.zeros((self.candidate_set_size, self.number_of_parameters))
 
         for c in range(0, self.candidate_set_size, 2):
-            direction = self.random.random_sample(size = (self.problem.number_of_parameters,)) * 2.0 - 1.0
+            direction = self.random.random_sample(size = (self.number_of_parameters,)) * 2.0 - 1.0
             candidate_parameters[c] = self.initial_parameters + direction * self.perturbation_length
             candidate_parameters[c + 1] = self.initial_parameters + direction * self.perturbation_length
 
         # Find initial candiate states
         candidate_identifiers = []
-        candidate_states = np.zeros((self.candidate_set_size, self.problem.number_of_states))
-        candidate_deltas = np.zeros((self.candidate_set_size, self.problem.number_of_states))
+        candidate_states = np.zeros((self.candidate_set_size, self.number_of_states))
+        candidate_deltas = np.zeros((self.candidate_set_size, self.number_of_states))
         candidate_objectives = np.zeros((self.candidate_set_size,))
         candidate_transitions = np.ones((self.candidate_set_size,))
 
@@ -151,15 +155,15 @@ class Opdyts:
             candidate_annotations = copy.copy(annotations)
             candidate_annotations.update({ "candidate": c })
 
-            candidate_identifiers.append(self.evaluator.submit(candidate_parameters[c], {
+            candidate_identifiers.append(evaluator.submit(candidate_parameters[c], {
                 #"iterations": transition_iterations,
                 "restart": self.initial_identifier
             }, candidate_annotations))
 
-        self.evaluator.wait()
+        evaluator.wait()
 
         for c in range(self.candidate_set_size):
-            candidate_objectives[c], candidate_states[c] = self.evaluator.get(candidate_identifiers[c])
+            candidate_objectives[c], candidate_states[c] = evaluator.get(candidate_identifiers[c])
             candidate_deltas[c] = candidate_states[c] - self.initial_state
 
         # Advance candidates
@@ -199,13 +203,13 @@ class Opdyts:
             })
 
             # Advance selected candidate
-            identifier = self.evaluator.submit(candidate_parameters[c], {
+            identifier = evaluator.submit(candidate_parameters[c], {
                 #"iterations": transition_iterations,
                 "restart": candidate_identifiers[c]
             }, annotations)
 
-            new_objective, new_state = self.evaluator.get(identifier)
-            self.evaluator.clean(candidate_identifiers[c])
+            new_objective, new_state = evaluator.get(identifier)
+            evaluator.clean(candidate_identifiers[c])
 
             candidate_deltas[c] = new_state - candidate_states[c]
             candidate_states[c], candidate_objectives[c] = new_state, new_objective
@@ -216,9 +220,9 @@ class Opdyts:
 
         for c in range(self.candidate_set_size):
             if c != index:
-                self.evaluator.clean(candidate_identifiers[c])
+                evaluator.clean(candidate_identifiers[c])
 
-        self.evaluator.clean(self.initial_identifier)
+        evaluator.clean(self.initial_identifier)
         self.initial_identifier = candidate_identifiers[index]
         self.initial_state = candidate_states[index]
         self.initial_parameters = candidate_parameters[index]

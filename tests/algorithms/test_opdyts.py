@@ -1,27 +1,28 @@
-from ..cases import CongestionSimulator, CongestionProblem
+from ..cases.quadratic import QuadraticSimulator, QuadraticProblem
+from ..cases.traffic import TrafficSimulator, TrafficProblem
 
 from octras.algorithms import Opdyts
 from octras import Loop, Evaluator
 
 import pytest
-import numpy as np
 
-def test_opdyts():
-    loop = Loop()
+def test_opdyts_traffic():
+    problem = TrafficProblem(iterations = 40)
 
     evaluator = Evaluator(
-        simulator = CongestionSimulator(),
-        problem = CongestionProblem(0.3, iterations = 10)
+        simulator = TrafficSimulator(),
+        problem = problem
     )
 
-    algorithm = Opdyts(evaluator,
-        candidate_set_size = 16,
-        number_of_transitions = 20,
-        perturbation_length = 50,
-        seed = 0
-    )
+    for seed in (1000, 2000, 3000, 4000):
+        algorithm = Opdyts(problem,
+            candidate_set_size = 16,
+            number_of_transitions = 10,
+            perturbation_length = 50,
+            seed = seed
+        )
 
-    assert np.round(Loop(threshold = 1e-3, maximum_cost = 10000).run(
-        evaluator = evaluator,
-        algorithm = algorithm
-    )) == 231
+        assert Loop(threshold = 1e-2).run(
+            evaluator = evaluator,
+            algorithm = algorithm
+        ) == pytest.approx((510.0, 412.0), 1.0)

@@ -4,5 +4,4 @@ from .fdsa import FDSA
 from .spsa import SPSA
 from .opdyts import Opdyts
 from .cma_es import CMAES
-#from .bbo import BatchBayesianOptimization
 from .nelder_mead import NelderMead

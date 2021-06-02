@@ -1,34 +1,33 @@
 class Problem:
     """
-        This class defines a optimization/calibration problem. A number
-        of attributes should be defined:
-
-        self.number_of_parameters = ?
-        self.number_of_states = ?
-
-        Additional information can be provided:
-
-        self.information = {}
-        self.reference_state = ?
+        This is the basic interface for a problem in octras. See the detailed
+        description of the methods below that need to be implemented.
     """
 
-    def __init__(self, car_reference, pt_reference):
-        raise NotImplementedError()
-
-    def prepare(self, x):
+    def get_information():
         """
-            This function gets a vector of numeric parameters. The task is
-            to return a dictionary with instructions for the simulator. The
-            return format is either just a dictionary or a tuple (dictionary, cost)
-            with cost being the execution cost of the run.
+            This method is supposed to return a dictionary with general information
+            on the optimization problem. These can be arbitrary values, but at least
+            the dictionary must contain one field `number_of_parameters`.
         """
         raise NotImplementedError()
 
-    def evaluate(self, x, result):
+    def parameterize(self, x):
         """
-            This is the objective function. It receives the numeric parameters
-            as the first argument and the output of the simulator as the
-            second argument. It should either return only an objective value
-            or a tuple of (objective value, state).
+            This method receives a vector of numeric parameters. The task is to return
+            a dictionary with instructions for the simulator. Which fields are required
+            depends on the specific simulator. The return format is either only a dictionary
+            or a tuple of the dictionary and the associated cost of the run.
+        """
+        raise NotImplementedError()
+
+    def evaluate(self, x, response):
+        """
+            This method represents the objective function. It receives the numeric
+            parameters as the first argument and the response of the simulator as the
+            second argument. The method should either return only a numeric objective
+            value or a tuple of (objective_value, state) where state is an arbitrary
+            dictionary which might contain additional information for logging or informing
+            the optimization algorithm.
         """
         raise NotImplementedError()

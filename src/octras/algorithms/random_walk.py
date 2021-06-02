@@ -1,33 +1,34 @@
 import numpy as np
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("octras")
+
+from octras import Evaluator
 
 class RandomWalk:
-    def __init__(self, evaluator, parallel = None, seed = None):
-        self.evaluator = evaluator
-        self.problem = self.evaluator.problem
-
-        self.parallel = parallel if not parallel is None else evaluator.parallel
+    def __init__(self, problem, parallel = 1, seed = 0):
+        self.parallel = parallel
 
         self.iteration = 0
+        self.random = np.random.RandomState(seed)
 
-        self.seed = seed
-        self.random = np.random.RandomState(self.seed)
+        problem_information = problem.get_information()
 
-        if not hasattr(self.problem, "bounds"):
-            raise RuntimeError("Problem needs to provide bounds if RandomWalk is used.")
+        if not "bounds" in problem_information:
+            raise RuntimeError("Random Walk expects bounds in problem information.")
 
-    def advance(self):
+        self.bounds = problem_information["bounds"]
+
+    def advance(self, evaluator: Evaluator):
         self.iteration += 1
         logger.info("Starting Random Walk iteration %d" % self.iteration)
 
         parameters = [np.array([
             bounds[0] + self.random.random() * (bounds[1] - bounds[0]) # TODO: Not demterinistic!
-            for bounds in self.problem.bounds
+            for bounds in self.bounds
         ]) for k in range(self.parallel)]
 
-        identifiers = [self.evaluator.submit(p) for p in parameters]
+        identifiers = [evaluator.submit(p) for p in parameters]
 
-        self.evaluator.wait(identifiers)
-        self.evaluator.clean()
+        evaluator.wait(identifiers)
+        evaluator.clean()

@@ -9,14 +9,17 @@ import glob
 import logging
 import deep_merge
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("octras")
 
 class MATSimSimulator(Simulator):
     """
-        Defines a wrapper around a standard MATSim simulation.
+        Defines a wrapper around a standard MATSim simulation
     """
 
-    def __init__(self, working_directory, **parameters):
+    def __init__(self, working_directory, parameters):
+        if not os.path.exists(working_directory):
+            raise RuntimeError("Working directory does not exist: %s" % working_directory)
+
         self.working_directory = os.path.realpath(working_directory)
         self.parameters = parameters
 
@@ -29,24 +32,16 @@ class MATSimSimulator(Simulator):
         if not "arguments" in self.parameters:
             self.parameters["arguments"] = []
 
-        if not "prefix_arguments" in self.parameters:
-            self.parameters["prefix_arguments"] = []
-
-        if not "postfix_arguments" in self.parameters:
-            self.parameters["postfix_arguments"] = []
-
         if not "config" in self.parameters:
             self.parameters["config"] = {}
 
         self.simulations = {}
 
     def run(self, identifier, parameters):
-        """
-            Runs a MATSim simulation.
-        """
         if identifier in self.simulations:
             raise RuntimeError("A simulation with identifier %s already exists." % identifier)
 
+        # Prepare the working space
         simulation_path = "%s/%s" % (self.working_directory, identifier)
 
         if os.path.exists(simulation_path):
@@ -54,60 +49,110 @@ class MATSimSimulator(Simulator):
 
         os.mkdir(simulation_path)
 
-        simulation_parameters = {}
-        simulation_parameters = deep_merge.merge(simulation_parameters, self.parameters)
-        simulation_parameters = deep_merge.merge(simulation_parameters, parameters)
-        parameters = simulation_parameters
+        # Merge config
+        config = dict()
+        config.update(self.parameters["config"])
 
-        # Rewrite configuration
-        if "iterations" in parameters:
-            if "controler.lastIteration" in parameters["config"]:
-                logger.warn("Overwriting 'controler.lastIteration' for simulation %s" % identifier)
+        if "config" in parameters:
+            config.update(parameters["config"])
 
-            if "controler.writeEventsInterval" in parameters["config"]:
-                logger.warn("Overwriting 'controler.writeEventsInterval' for simulation %s" % identifier)
+        # Merge arguments
+        arguments = []
+        arguments += self.parameters["arguments"]
 
-            if "controler.writePlansInterval" in parameters["config"]:
-                logger.warn("Overwriting 'controler.writePlansInterval' for simulation %s" % identifier)
+        if "arguments" in parameters:
+            arguments += parameters["arguments"]
 
-            parameters["config"]["controler.lastIteration"] = parameters["iterations"]
-            parameters["config"]["controler.writeEventsInterval"] = parameters["iterations"]
-            parameters["config"]["controler.writePlansInterval"] = parameters["iterations"]
+        # A specific random seed is requested
+        if "random_seed" in parameters or "random_seed" in self.parameters:
+            random_seed = None
+            if "random_seed" in self.parameters: random_seed = self.parameters["random_seed"]
+            if "random_seed" in parameters: random_seed = parameters["random_seed"]
 
-        if "random_seed" in parameters:
-            if "global.random_seed" in parameters["config"]:
+            if "global.random_seed" in config:
                 logger.warn("Overwriting 'global.random_seed' for simulation %s" % identifier)
 
-            parameters["config"]["global.random_seed"] = parameters["random_seed"]
+            config["global.random_seed"] = random_seed
 
+        # It is requested to restart from a certain existing simulation output
         if "restart" in parameters:
-            if "plans.inputPlansFile" in parameters["config"]:
+            if "plans.inputPlansFile" in config:
                 logger.warn("Overwriting 'plans.inputPlansFile' for simulation %s" % identifier)
 
-            restart_path = "%s/%s" % (self.working_directory, parameters["restart"])
-            parameters["config"]["plans.inputPlansFile"] = "%s/output/output_plans.xml.gz" % restart_path
+            if "controler.firstIteration" in config:
+                logger.warn("Overwriting 'controler.firstIteration' for simulation %s" % identifier)
 
-        if "controler.outputDirectory" in parameters["config"]:
+            restart_path = "%s/%s" % (self.working_directory, parameters["restart"])
+
+            # Find the iteration at which to start
+            df_stopwatch = pd.read_csv("%s/output/stopwatch.txt", sep = ";")
+            first_iteration = df_stopwatch["Iteration"].max()
+
+            config["plans.inputPlansFile"] = "%s/output/output_plans.xml.gz" % restart_path
+            config["controler.firstIteration"] = first_iteration
+
+        # A certain number of iterations is requested
+        iterations = None
+
+        if "iterations" in parameters or "iterations" in self.parameters:
+            if "iterations" in self.parameters: iterations = self.parameters["iterations"]
+            if "iterations" in parameters: iterations = parameters["iterations"]
+
+            if "controler.lastIteration" in config:
+                logger.warn("Overwriting 'controler.lastIteration' for simulation %s" % identifier)
+
+            if "controler.writeEventsInterval" in config:
+                logger.warn("Overwriting 'controler.writeEventsInterval' for simulation %s" % identifier)
+
+            if "controler.writePlansInterval" in config:
+                logger.warn("Overwriting 'controler.writePlansInterval' for simulation %s" % identifier)
+
+            last_iteration = iterations
+
+            # In case firstIteration is set, we need to add the number here
+            if "controler.firstIteration" in config:
+                last_iteration += parameters["controler.firstIteration"]
+
+            config["controler.lastIteration"] = last_iteration
+            config["controler.writeEventsInterval"] = last_iteration
+            config["controler.writePlansInterval"] = last_iteration
+
+        # Output directory is standardized so we know where the files are
+        if "controler.outputDirectory" in config:
             logger.warn("Overwriting 'controler.outputDirectory' for simulation %s" % identifier)
 
-        parameters["config"]["controler.outputDirectory"] = "%s/output" % simulation_path
+        config["controler.outputDirectory"] = "%s/output" % simulation_path
 
         # Construct command line arguments
-        if not "class_path" in parameters:
+        if not "class_path" in parameters and not "class_path" in self.parameters:
             raise RuntimeError("Parameter 'class_path' must be set for the MATSim simulator.")
 
-        if not "main_class" in parameters:
+        if not "main_class" in parameters and not "main_class" in self.parameters:
             raise RuntimeError("Parameter 'main_class' must be set for the MATSim simulator.")
 
-        arguments = [
-            parameters["java"], "-Xmx%s" % parameters["memory"],
-            "-cp", parameters["class_path"], parameters["main_class"]
-        ] + parameters["prefix_arguments"] + parameters["arguments"]
+        class_path = None
+        if "class_path" in self.parameters: class_path = self.parameters["class_path"]
+        if "class_path" in parameters: class_path = parameters["class_path"]
 
-        for key, value in parameters["config"].items():
+        main_class = None
+        if "main_class" in self.parameters: main_class = self.parameters["main_class"]
+        if "main_class" in parameters: main_class = parameters["main_class"]
+
+        java = self.parameters["java"]
+        if "java" in parameters: java = parameters["java"]
+
+        memory = self.parameters["memory"]
+        if "memory" in parameters: memory = parameters["memory"]
+
+        arguments = [
+            java, "-Xmx%s" % memory,
+            "-cp", class_path, main_class
+        ] + arguments
+
+        for key, value in config.items():
             arguments += ["--config:%s" % key, str(value)]
 
-        arguments += parameters["postfix_arguments"]
+        arguments = [str(a) for a in arguments]
 
         stdout = open("%s/simulation_output.log" % simulation_path, "w+")
         stderr = open("%s/simulation_error.log" % simulation_path, "w+")
@@ -118,7 +163,7 @@ class MATSimSimulator(Simulator):
         self.simulations[identifier] = {
             "process": sp.Popen(arguments, stdout = stdout, stderr = stderr),
             "arguments": arguments, "status": "running", "progress": -1,
-            "iterations": parameters["iterations"] if "iterations" in parameters else None
+            "iterations": iterations
         }
 
     def _ping(self):
@@ -143,6 +188,7 @@ class MATSimSimulator(Simulator):
                     simulation["status"] = "done"
                 else:
                     # Errorerd
+                    del self.simulations[identifier]
                     raise RuntimeError("Error running simulation {}. See {}/{}/simulation_error.log".format(identifier, self.working_directory, identifier))
 
     def _get_iteration(self, identifier):

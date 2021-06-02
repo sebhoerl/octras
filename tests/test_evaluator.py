@@ -1,7 +1,7 @@
 import pytest
 
-from .cases import RosenbrockSimulator
-from .cases import RosenbrockProblem
+from .cases.rosenbrock import RosenbrockSimulator
+from .cases.rosenbrock import RosenbrockProblem
 
 from octras import Evaluator
 

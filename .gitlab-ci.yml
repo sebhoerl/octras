@@ -1,7 +1,0 @@
-test:
-   script:
-       - source activate ivt
-       - virtualenv testenv
-       - source testenv/bin/activate
-       - pip install -e .[test]
-       - python3 -m pytest tests

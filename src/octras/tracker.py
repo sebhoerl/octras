@@ -1,7 +1,7 @@
 import logging
 import pickle
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("octras")
 
 class PickleTracker:
     def __init__(self, output_path):
@@ -20,7 +20,7 @@ class PickleTracker:
         with open(self.output_path, "wb+") as f:
             pickle.dump(self.history, f)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("octras")
 
 class LogTracker:
     def __init__(self):

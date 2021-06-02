@@ -14,25 +14,38 @@ Implemented optimization / calibration algorithms:
 - **[CMA-ES][4]**: Covariance Matrix Adaptation Evolution Strategy
 - **[scipy.optimize][5]**: All algorithms contained in the `scipy.optimize` package can be used.
 
-# Running with MATSim
+# Installing the tools
 
-For reference, there is a [use case](use_case/README.md) for MATSim that uses the framework.
-
-# Running the unit tests
-
-After cloning the repository, unit tests can be run with:
+We provide a conda environment in `environment.yml` which lists all the necessary dependencies. Once set up, you can call
 
 ```sh
-cd /path/to/repository
+conda develop src
+```
 
-virtualenv test_env
-source test_env/bin/activate
+in the main directory of the cloned project to let conda know about the `octras` package which is located in `/src`. Afterwards, you'll be able to use `octras` inside of this enviroment, for instance, in a Jupyter notebook.
 
-pip install -e .
-pip3 install pytest
+# Examples
 
+Currently, there is one example on running a simulation for Corsica using the eqasim extension of MATSim. In the example, the mode-specific constant of a discrete choice model is calibrated to achieve a certain mode share for the `car` mode in the simulation.
+
+To run the example, you'll need Jupyter. You can install it easily in your environment where you have also installed `octras` by
+
+`conda install jupyter matplotlib`
+
+and then starting it via
+
+`jupyter`
+
+and then selecting the notebook in `examples`. You'll need a couple of knowledge on how to build MATSim / Java packaged. However, if you have certain standard tools installed (such as Maven and Git), the notebook will guide you through the process.
+
+# Running the tests
+
+To verify that the framework works as expected, enter your `octras` conda environment and execute:
+
+```sh
 python3 -m pytest tests
 ```
+The unit tests should start running then and all of them should finish without error.
 
 [1]: https://en.wikipedia.org/wiki/Simultaneous_perturbation_stochastic_approximation
 [2]: https://en.wikipedia.org/wiki/Simultaneous_perturbation_stochastic_approximation

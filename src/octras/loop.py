@@ -1,12 +1,12 @@
 import numpy as np
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("octras")
 
 class Loop:
-    def __init__(self, maximum_cost = np.inf, maximum_runs = np.inf, threshold = 0.0):
+    def __init__(self, maximum_cost = np.inf, maximum_evaluations = np.inf, threshold = 0.0):
         self.maximum_cost = maximum_cost
-        self.maximum_runs = maximum_runs
+        self.maximum_evaluations = maximum_evaluations
         self.threshold = threshold
 
         self.objective = None
@@ -14,7 +14,7 @@ class Loop:
 
     def _process(self, simulation):
         self.cost = simulation["evaluator_cost"]
-        self.runs = simulation["evaluator_runs"]
+        self.evaluations = simulation["evaluator_evaluations"]
 
         if self.objective is None or simulation["objective"] < self.objective:
             if not ("transient" in simulation and simulation["transient"]):
@@ -26,12 +26,15 @@ class Loop:
                 ))
 
     def run(self, evaluator, algorithm, tracker = None):
+        initial_evaluations = evaluator.current_evaluations
+        initial_cost = evaluator.current_cost
+
         while True:
-            if evaluator.current_cost > self.maximum_cost:
+            if evaluator.current_cost - initial_cost > self.maximum_cost:
                 logger.warn("Stopping because of cost limit is reached.")
                 break
 
-            if evaluator.current_runs > self.maximum_runs:
+            if evaluator.current_evaluations - initial_evaluations > self.maximum_evaluations:
                 logger.warn("Stopping because of run limit is reached.")
                 break
 
@@ -39,7 +42,7 @@ class Loop:
                 logger.info("Stopping because of objective is minized.")
                 break
 
-            algorithm.advance()
+            algorithm.advance(evaluator)
 
             trace = evaluator.fetch_trace()
 
