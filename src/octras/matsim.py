@@ -16,12 +16,13 @@ class MATSimSimulator(Simulator):
         Defines a wrapper around a standard MATSim simulation
     """
 
-    def __init__(self, working_directory, parameters):
+    def __init__(self, working_directory, parameters, covergence_handler = None):
         if not os.path.exists(working_directory):
             raise RuntimeError("Working directory does not exist: %s" % working_directory)
 
         self.working_directory = os.path.realpath(working_directory)
         self.parameters = parameters
+        self.covergence_handler = covergence_handler
 
         if not "memory" in self.parameters:
             self.parameters["memory"] = "10G"
@@ -166,6 +167,35 @@ class MATSimSimulator(Simulator):
             "iterations": iterations
         }
 
+    def check_convergence(self, simulation_path, iteration):
+        simulation_path = "%s/%s" % (self.working_directory, identifier)
+        raise NotImplementedError()
+
+    def _update_convergence(self, identifier):
+        simulation_path = "%s/%s" % (self.working_directory, identifier)
+        converged = False
+
+        if os.path.exists("%s/tmp/convergence_output.json" % simulation_path):
+            with open("%s/tmp/convergence_output.json" % simulation_path) as f:
+                if self.covergence_handler is None:
+                    raise RuntimeError("MATSim asks for convergence but no handler is defined")
+
+                output = json.load(f)
+
+                iteration = self._get_iteration(identifier)
+
+                if output["signal"] == "mayTerminate":
+                    iteration -= 1
+
+                if os.path.exists("%s/ITERS/it.%d" % (simulation_path, iteration)):
+                    converged = self.covergence_handler(simulation_path, iteration)
+
+            with open("%s/tmp/convergence_input.json" % simulation_path, "w+") as f:
+                json.dump(f, dict(
+                    sequence = output["sequence"],
+                    response = converged
+                ))
+
     def _ping(self):
         for identifier, simulation in self.simulations.items():
             if simulation["status"] == "running":
@@ -174,6 +204,8 @@ class MATSimSimulator(Simulator):
                 if return_code is None:
                     # Still running!
                     iteration = self._get_iteration(identifier)
+
+                    self._check_convergence(identifier)
 
                     if iteration > simulation["progress"]:
                         simulation["progress"] = iteration
