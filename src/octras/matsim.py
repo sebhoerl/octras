@@ -186,7 +186,11 @@ class MATSimSimulator(Simulator):
                 if self.convergence_handler is None:
                     raise RuntimeError("MATSim asks for convergence but no handler is defined")
 
-                output = json.load(f)
+                try:
+                    output = json.load(f)
+                except json.JSONDecodeError:
+                    # Most likely file write synchronisation issue
+                    return False
 
                 iteration = self._get_iteration(identifier)
                 response = None
