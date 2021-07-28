@@ -5,24 +5,32 @@ import subprocess as sp
 import pandas as pd
 import numpy as np
 import glob
+import json
 
 import logging
 import deep_merge
 
 logger = logging.getLogger("octras")
 
+class ConvergenceHandler:
+    def may_terminate(self, path, iteration):
+        pass
+
+    def do_terminate(self, path, iteration):
+        pass
+
 class MATSimSimulator(Simulator):
     """
         Defines a wrapper around a standard MATSim simulation
     """
 
-    def __init__(self, working_directory, parameters, covergence_handler = None):
+    def __init__(self, working_directory, parameters, convergence_handler = None):
         if not os.path.exists(working_directory):
             raise RuntimeError("Working directory does not exist: %s" % working_directory)
 
         self.working_directory = os.path.realpath(working_directory)
         self.parameters = parameters
-        self.covergence_handler = covergence_handler
+        self.convergence_handler = convergence_handler
 
         if not "memory" in self.parameters:
             self.parameters["memory"] = "10G"
@@ -164,37 +172,45 @@ class MATSimSimulator(Simulator):
         self.simulations[identifier] = {
             "process": sp.Popen(arguments, stdout = stdout, stderr = stderr),
             "arguments": arguments, "status": "running", "progress": -1,
-            "iterations": iterations
+            "iterations": iterations,
+            "convergence_sequence_may": -1,
+            "convergence_sequence_do": -1
         }
 
-    def check_convergence(self, simulation_path, iteration):
-        simulation_path = "%s/%s" % (self.working_directory, identifier)
-        raise NotImplementedError()
-
-    def _update_convergence(self, identifier):
-        simulation_path = "%s/%s" % (self.working_directory, identifier)
-        converged = False
+    def _handle_convergence(self, identifier):
+        simulation_path = "%s/%s/output" % (self.working_directory, identifier)
+        terminate = False
 
         if os.path.exists("%s/tmp/convergence_output.json" % simulation_path):
             with open("%s/tmp/convergence_output.json" % simulation_path) as f:
-                if self.covergence_handler is None:
+                if self.convergence_handler is None:
                     raise RuntimeError("MATSim asks for convergence but no handler is defined")
 
                 output = json.load(f)
 
                 iteration = self._get_iteration(identifier)
+                response = None
 
                 if output["signal"] == "mayTerminate":
-                    iteration -= 1
+                    if self.simulations[identifier]["convergence_sequence_may"] < output["sequence"]:
+                        response = bool(self.convergence_handler.may_terminate(simulation_path, iteration + 1))
+                        self.simulations[identifier]["convergence_sequence_may"] = output["sequence"]
+                elif output["signal"] == "doTerminate":
+                    if self.simulations[identifier]["convergence_sequence_do"] < output["sequence"]:
+                        response = bool(self.convergence_handler.do_terminate(simulation_path, iteration))
+                        self.simulations[identifier]["convergence_sequence_do"] = output["sequence"]
+                        terminate = response
+                else:
+                    raise RuntimeError("Unknown signal")
 
-                if os.path.exists("%s/ITERS/it.%d" % (simulation_path, iteration)):
-                    converged = self.covergence_handler(simulation_path, iteration)
+            if not response is None:
+                with open("%s/tmp/convergence_input.json" % simulation_path, "w+") as f:
+                    json.dump(dict(
+                        sequence = output["sequence"],
+                        response = response
+                    ), f)
 
-            with open("%s/tmp/convergence_input.json" % simulation_path, "w+") as f:
-                json.dump(f, dict(
-                    sequence = output["sequence"],
-                    response = converged
-                ))
+        return terminate
 
     def _ping(self):
         for identifier, simulation in self.simulations.items():
@@ -205,7 +221,10 @@ class MATSimSimulator(Simulator):
                     # Still running!
                     iteration = self._get_iteration(identifier)
 
-                    self._check_convergence(identifier)
+                    if self._handle_convergence(identifier):
+                        logger.info("Convergence criterion says simulation {} should terminate.".format(
+                            identifier
+                        ))
 
                     if iteration > simulation["progress"]:
                         simulation["progress"] = iteration
