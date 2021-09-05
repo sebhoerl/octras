@@ -34,3 +34,11 @@ class LogTracker:
                 logger.info("Found new best objective (%f) at %s" % (
                     self.best_objective, str(simulation["x"])
                 ))
+
+class CompositeTracker:
+    def __init__(self, trackers):
+        self.trackers = trackers
+
+    def notify(self, simulation):
+        for tracker in self.trackers:
+            tracker.notift(simulation)

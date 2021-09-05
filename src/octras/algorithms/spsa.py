@@ -1,5 +1,5 @@
 import numpy as np
-import deep_merge
+from deepmerge import always_merger
 
 import logging
 logger = logging.getLogger("octras")
@@ -63,12 +63,12 @@ class SPSA:
         # Schedule samples
         positive_parameters = np.copy(self.parameters)
         positive_parameters += direction * perturbation_length
-        annotations = deep_merge.merge(annotations, { "type": "positive_gradient" })
+        annotations = always_merger.merge(annotations, { "type": "positive_gradient" })
         positive_identifier = evaluator.submit(positive_parameters, annotations = annotations)
 
         negative_parameters = np.copy(self.parameters)
         negative_parameters -= direction * perturbation_length
-        annotations = deep_merge.merge(annotations, { "type": "negative_gradient" })
+        annotations = always_merger.merge(annotations, { "type": "negative_gradient" })
         negative_identifier = evaluator.submit(negative_parameters, annotations = annotations)
 
         # Wait for gradient run results

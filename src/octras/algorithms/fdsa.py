@@ -1,5 +1,5 @@
 import numpy as np
-import deep_merge
+from deepmerge import always_merger
 
 import logging
 logger = logging.getLogger("octras")
@@ -57,16 +57,16 @@ class FDSA:
 
         # Schedule all necessary runs
         for d in range(len(self.parameters)):
-            annotations = deep_merge.merge(annotations, { "dimension": d })
+            annotations = always_merger.merge(annotations, { "dimension": d })
 
             positive_parameters = np.copy(self.parameters)
             positive_parameters[d] += perturbation_length
-            annotations = deep_merge.merge(annotations, { "type": "positive_gradient" })
+            annotations = always_merger.merge(annotations, { "type": "positive_gradient" })
             positive_identifier = evaluator.submit(positive_parameters, annotations = annotations)
 
             negative_parameters = np.copy(self.parameters)
             negative_parameters[d] -= perturbation_length
-            annotations = deep_merge.merge(annotations, { "sign": "negative_gradient" })
+            annotations = always_merger.merge(annotations, { "sign": "negative_gradient" })
             negative_identifier = evaluator.submit(negative_parameters, annotations = annotations)
 
             gradient_information.append((positive_parameters, positive_identifier, negative_parameters, negative_identifier))

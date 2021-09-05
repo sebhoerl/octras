@@ -1,4 +1,5 @@
-import uuid, time, logging, deep_merge
+import uuid, time, logging
+from deepmerge import always_merger
 
 from .simulator import Simulator
 from .problem import Problem
@@ -53,7 +54,7 @@ class Evaluator:
         else:
             parameters, cost = response, 1
 
-        parameters = deep_merge.merge(parameters, simulator_parameters)
+        parameters = always_merger.merge(parameters, simulator_parameters)
 
         self.simulations[identifier] = {
             "identifier": identifier,
