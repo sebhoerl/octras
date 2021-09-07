@@ -93,7 +93,7 @@ class MATSimSimulator(Simulator):
             restart_path = "%s/%s" % (self.working_directory, parameters["restart"])
 
             # Find the iteration at which to start
-            df_stopwatch = pd.read_csv("%s/output/stopwatch.txt", sep = ";")
+            df_stopwatch = pd.read_csv("%s/output/stopwatch.txt" % restart_path, sep = "\t")
             first_iteration = df_stopwatch["Iteration"].max()
 
             config["plans.inputPlansFile"] = "%s/output/output_plans.xml.gz" % restart_path
@@ -119,7 +119,7 @@ class MATSimSimulator(Simulator):
 
             # In case firstIteration is set, we need to add the number here
             if "controler.firstIteration" in config:
-                last_iteration += parameters["controler.firstIteration"]
+                last_iteration += config["controler.firstIteration"]
 
             config["controler.lastIteration"] = last_iteration
             config["controler.writeEventsInterval"] = last_iteration
