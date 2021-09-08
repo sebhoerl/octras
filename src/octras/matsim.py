@@ -99,6 +99,8 @@ class MATSimSimulator(Simulator):
             config["plans.inputPlansFile"] = "%s/output/output_plans.xml.gz" % restart_path
             config["controler.firstIteration"] = first_iteration
 
+            arguments += ["--signal-input-path", restart_path + "/output"]
+
         # A certain number of iterations is requested
         iterations = None
 
