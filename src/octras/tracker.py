@@ -41,4 +41,4 @@ class CompositeTracker:
 
     def notify(self, simulation):
         for tracker in self.trackers:
-            tracker.notift(simulation)
+            tracker.notify(simulation)
