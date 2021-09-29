@@ -97,9 +97,15 @@ class MATSimSimulator(Simulator):
             first_iteration = df_stopwatch["Iteration"].max()
 
             config["plans.inputPlansFile"] = "%s/output/output_plans.xml.gz" % restart_path
-            config["controler.firstIteration"] = first_iteration
 
-            arguments += ["--signal-input-path", restart_path + "/output"]
+            ignore_convergence = False
+
+            if "restart_ignore_convergence" in parameters:
+                ignore_convergence = parameters["restart_ignore_convergence"]
+
+            if not ignore_convergence:
+                config["controler.firstIteration"] = first_iteration
+                arguments += ["--signal-input-path", restart_path + "/output"]
 
         # A certain number of iterations is requested
         iterations = None

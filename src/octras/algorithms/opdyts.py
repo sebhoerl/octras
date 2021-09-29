@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.optimize as opt
+import pandas as pd
 
 import copy
 
@@ -79,7 +80,7 @@ class AdaptationProblem:
         return result.x
 
 class Opdyts:
-    def __init__(self, problem, candidate_set_size, number_of_transitions, perturbation_length = 1.0, adaptation_weight = 0.3, seed = 0):
+    def __init__(self, problem, candidate_set_size, number_of_transitions, perturbation_length = 1.0, adaptation_weight = 0.3, seed = 0, transition_iterations = 20):
         self.iteration = 0
         self.v, self.w = 0.0, 0.0
 
@@ -92,6 +93,7 @@ class Opdyts:
         self.candidate_set_size = candidate_set_size
         self.perturbation_length = perturbation_length
         self.number_of_transitions = number_of_transitions
+        self.transition_iterations = transition_iterations
 
         self.information = { "algorithm": "Opdyts" }
 
@@ -124,7 +126,7 @@ class Opdyts:
             logger.info("Initializing Opdyts")
 
             self.initial_identifier = evaluator.submit(self.initial_parameters,
-                { "iterations": 1 }, { "type": "initial", "transient": True }
+                { "iterations": 0 }, { "type": "initial", "transient": True }
             )
             self.initial_objective, self.initial_state = evaluator.get(self.initial_identifier)
 
@@ -156,8 +158,9 @@ class Opdyts:
             candidate_annotations.update({ "candidate": c })
 
             candidate_identifiers.append(evaluator.submit(candidate_parameters[c], {
-                #"iterations": transition_iterations,
-                "restart": self.initial_identifier
+                "iterations": self.transition_iterations,
+                "restart": self.initial_identifier,
+                "restart_ignore_convergence": True
             }, candidate_annotations))
 
         evaluator.wait()
@@ -171,7 +174,10 @@ class Opdyts:
         local_adaptation_equilibrium_gap = []
         local_adaptation_uniformity_gap = []
 
-        while np.max(candidate_transitions) < self.number_of_transitions:
+        has_converged = False
+        converged_index = None
+
+        while not has_converged: # np.max(candidate_transitions) < self.number_of_transitions:
             # Approximate selection problem
             selection_problem = ApproximateSelectionProblem(self.v, self.w, candidate_deltas, candidate_objectives)
             alpha = selection_problem.solve()
@@ -189,11 +195,11 @@ class Opdyts:
                 transient_performance, equilibrium_gap, uniformity_gap)
 
             cumulative_alpha = np.cumsum(alpha)
-            c = np.sum(self.random.random_sample() > cumulative_alpha) # TODO: Not deterministic!
+            c = np.sum(self.random.random_sample() > cumulative_alpha)
 
             logger.info("Transitioning candidate %d", c)
             candidate_transitions[c] += 1
-            transient = candidate_transitions[c] < self.number_of_transitions
+            transient = True # candidate_transitions[c] < self.number_of_transitions
 
             annotations.update({
                 "type": "transition",
@@ -204,7 +210,7 @@ class Opdyts:
 
             # Advance selected candidate
             identifier = evaluator.submit(candidate_parameters[c], {
-                #"iterations": transition_iterations,
+                "iterations": self.transition_iterations,
                 "restart": candidate_identifiers[c]
             }, annotations)
 
@@ -215,7 +221,15 @@ class Opdyts:
             candidate_states[c], candidate_objectives[c] = new_state, new_objective
             candidate_identifiers[c] = identifier
 
-        index = np.argmax(candidate_transitions)
+            # This is a hack!
+
+            df_convergence = pd.read_csv("work/%s/output/convergence.csv" % identifier, sep = ";")
+            has_converged = np.any(df_convergence["active"] == 0.0)
+
+            if has_converged:
+                converged_index = c
+
+        index = converged_index # np.argmax(candidate_transitions)
         logger.info("Solved selection problem with candidate %d", index)
 
         for c in range(self.candidate_set_size):
